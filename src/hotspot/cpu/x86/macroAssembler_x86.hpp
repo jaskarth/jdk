@@ -479,10 +479,19 @@ class MacroAssembler: public Assembler {
   void fmad(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c);
   void fmaf(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c);
 
+    // dst = c = -a * b + c
+  void fnmad(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c);
+  void fnmaf(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c);
+
   void vfmad(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c, int vector_len);
   void vfmaf(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c, int vector_len);
   void vfmad(XMMRegister dst, XMMRegister a, Address b, XMMRegister c, int vector_len);
   void vfmaf(XMMRegister dst, XMMRegister a, Address b, XMMRegister c, int vector_len);
+
+  void vfnmad(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c, int vector_len);
+  void vfnmaf(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c, int vector_len);
+  void vfnmad(XMMRegister dst, XMMRegister a, Address b, XMMRegister c, int vector_len);
+  void vfnmaf(XMMRegister dst, XMMRegister a, Address b, XMMRegister c, int vector_len);
 
 
   // same as fcmp2int, but using SSE2

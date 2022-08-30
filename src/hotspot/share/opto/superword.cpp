@@ -2794,7 +2794,7 @@ bool SuperWord::output() {
           vn = new CMoveVDNode(cc, src1, src2, vt);
         }
         NOT_PRODUCT(if(is_trace_cmov()) {tty->print("SWPointer::output: created new CMove node %d: ", vn->_idx); vn->dump();})
-      } else if (opc == Op_FmaD || opc == Op_FmaF) {
+      } else if (opc == Op_FmaD || opc == Op_FmaF || opc == Op_FmaNegD || opc == Op_FmaNegF) {
         // Promote operands to vector
         Node* in1 = vector_opd(p, 1);
         Node* in2 = vector_opd(p, 2);

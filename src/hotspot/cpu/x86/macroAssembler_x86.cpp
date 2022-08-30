@@ -2238,6 +2238,22 @@ void MacroAssembler::fmaf(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegi
   }
 }
 
+// dst = c = -a * b + c
+void MacroAssembler::fnmad(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c) {
+    Assembler::vfnmadd231sd(c, a, b);
+    if (dst != c) {
+        movdbl(dst, c);
+    }
+}
+
+// dst = c = -a * b + c
+void MacroAssembler::fnmaf(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c) {
+    Assembler::vfnmadd231ss(c, a, b);
+    if (dst != c) {
+        movflt(dst, c);
+    }
+}
+
 // dst = c = a * b + c
 void MacroAssembler::vfmad(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c, int vector_len) {
   Assembler::vfmadd231pd(c, a, b, vector_len);
@@ -2270,9 +2286,42 @@ void MacroAssembler::vfmaf(XMMRegister dst, XMMRegister a, Address b, XMMRegiste
   }
 }
 
+// Negative FMA variants
+
+// dst = c = -a * b + c
+void MacroAssembler::vfnmad(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c, int vector_len) {
+    Assembler::vfnmadd231pd(c, a, b, vector_len);
+    if (dst != c) {
+        vmovdqu(dst, c);
+    }
+}
+
+// dst = c = -a * b + c
+void MacroAssembler::vfnmaf(XMMRegister dst, XMMRegister a, XMMRegister b, XMMRegister c, int vector_len) {
+    Assembler::vfnmadd231ps(c, a, b, vector_len);
+    if (dst != c) {
+        vmovdqu(dst, c);
+    }
+}
+
+// dst = c = -a * b + c
+void MacroAssembler::vfnmad(XMMRegister dst, XMMRegister a, Address b, XMMRegister c, int vector_len) {
+    Assembler::vfnmadd231pd(c, a, b, vector_len);
+    if (dst != c) {
+        vmovdqu(dst, c);
+    }
+}
+
+// dst = c = -a * b + c
+void MacroAssembler::vfnmaf(XMMRegister dst, XMMRegister a, Address b, XMMRegister c, int vector_len) {
+    Assembler::vfnmadd231ps(c, a, b, vector_len);
+    if (dst != c) {
+        vmovdqu(dst, c);
+    }
+}
+
 void MacroAssembler::incrementl(AddressLiteral dst, Register rscratch) {
   assert(rscratch != noreg || always_reachable(dst), "missing");
-
   if (reachable(dst)) {
     incrementl(as_Address(dst));
   } else {

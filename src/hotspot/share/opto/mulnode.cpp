@@ -1594,6 +1594,28 @@ const Type* FmaDNode::Value(PhaseGVN* phase) const {
 #endif
 }
 
+//------------------------------Ideal---------------------------------------
+Node *FmaDNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+    bool is1 = in(1)->Opcode() == Op_NegD;
+    bool is2 = in(2)->Opcode() == Op_NegD;
+
+    if (is1 ^ is2) {
+        if (is1) {
+            return new FmaNegDNode(in(0), in(1)->in(1), in(2), in(3));
+        } else if (is2) {
+            return new FmaNegDNode(in(0), in(1), in(2)->in(1), in(3));
+        } else {
+            assert(false, "should never reach");
+        }
+    }
+
+    if (is1 && is2) {
+        return new FmaDNode(in(0), in(1)->in(1), in(2)->in(1), in(3));
+    }
+
+    return NULL;
+}
+
 //=============================================================================
 //------------------------------Value------------------------------------------
 const Type* FmaFNode::Value(PhaseGVN* phase) const {
@@ -1614,6 +1636,28 @@ const Type* FmaFNode::Value(PhaseGVN* phase) const {
   float f3 = t3->getf();
   return TypeF::make(fma(f1, f2, f3));
 #endif
+}
+
+//------------------------------Ideal---------------------------------------
+Node *FmaFNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+    bool is1 = in(1)->Opcode() == Op_NegF;
+    bool is2 = in(2)->Opcode() == Op_NegF;
+
+    if (is1 ^ is2) {
+        if (is1) {
+            return new FmaNegFNode(in(0), in(1)->in(1), in(2), in(3));
+        } else if (is2) {
+            return new FmaNegFNode(in(0), in(1), in(2)->in(1), in(3));
+        } else {
+            assert(false, "should never reach");
+        }
+    }
+
+    if (is1 && is2) {
+        return new FmaFNode(in(0), in(1)->in(1), in(2)->in(1), in(3));
+    }
+
+    return NULL;
 }
 
 //=============================================================================

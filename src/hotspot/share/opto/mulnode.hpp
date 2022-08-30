@@ -363,6 +363,7 @@ class FmaDNode : public Node {
 public:
   FmaDNode(Node *c, Node *in1, Node *in2, Node *in3) : Node(c, in1, in2, in3) {}
   virtual int Opcode() const;
+  virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
   const Type *bottom_type() const { return Type::DOUBLE; }
   virtual uint ideal_reg() const { return Op_RegD; }
   virtual const Type* Value(PhaseGVN* phase) const;
@@ -374,9 +375,26 @@ class FmaFNode : public Node {
 public:
   FmaFNode(Node *c, Node *in1, Node *in2, Node *in3) : Node(c, in1, in2, in3) {}
   virtual int Opcode() const;
+  virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
   const Type *bottom_type() const { return Type::FLOAT; }
   virtual uint ideal_reg() const { return Op_RegF; }
   virtual const Type* Value(PhaseGVN* phase) const;
+};
+
+//------------------------------FmaNegDNode--------------------------------------
+// fused-multiply-add double, negative first arg
+class FmaNegDNode : public FmaDNode {
+public:
+    FmaNegDNode(Node *c, Node *in1, Node *in2, Node *in3) : FmaDNode(c, in1, in2, in3) {}
+    virtual int Opcode() const;
+};
+
+//------------------------------FmaNegFNode--------------------------------------
+// fused-multiply-add float
+class FmaNegFNode : public FmaFNode {
+public:
+    FmaNegFNode(Node *c, Node *in1, Node *in2, Node *in3) : FmaFNode(c, in1, in2, in3) {}
+    virtual int Opcode() const;
 };
 
 //------------------------------MulAddS2INode----------------------------------

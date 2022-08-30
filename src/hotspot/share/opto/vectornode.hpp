@@ -366,6 +366,22 @@ public:
   virtual int Opcode() const;
 };
 
+//------------------------------FmaVNegDNode--------------------------------------
+// Vector multiply double
+class FmaVNegDNode : public VectorNode {
+public:
+    FmaVNegDNode(Node* in1, Node* in2, Node* in3, const TypeVect* vt) : VectorNode(in1, in2, in3, vt) {}
+    virtual int Opcode() const;
+};
+
+//------------------------------FmaVNegFNode--------------------------------------
+// Vector multiply float
+class FmaVNegFNode : public VectorNode {
+public:
+    FmaVNegFNode(Node* in1, Node* in2, Node* in3, const TypeVect* vt) : VectorNode(in1, in2, in3, vt) {}
+    virtual int Opcode() const;
+};
+
 //------------------------------CMoveVFNode--------------------------------------
 // Vector float conditional move
 class CMoveVFNode : public VectorNode {

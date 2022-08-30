@@ -4162,6 +4162,7 @@ void C2_MacroAssembler::evmasked_op(int ideal_opc, BasicType eType, KRegister ma
       evpfma213ps(dst, mask, src1, src2, merge, vlen_enc); break;
     case Op_FmaVD:
       evpfma213pd(dst, mask, src1, src2, merge, vlen_enc); break;
+      // FIXME: Negative FMA vector with evex encoding
     case Op_VectorRearrange:
       evperm(eType, dst, mask, src2, src1, merge, vlen_enc); break;
     case Op_LShiftVS:
@@ -4246,6 +4247,7 @@ void C2_MacroAssembler::evmasked_op(int ideal_opc, BasicType eType, KRegister ma
       evpfma213ps(dst, mask, src1, src2, merge, vlen_enc); break;
     case Op_FmaVD:
       evpfma213pd(dst, mask, src1, src2, merge, vlen_enc); break;
+      // FIXME: Negative FMA vector with evex encoding
     case Op_MaxV:
       evpmaxs(eType, dst, mask, src1, src2, merge, vlen_enc); break;
     case Op_MinV:

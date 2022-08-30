@@ -1765,6 +1765,8 @@
   declare_c2_type(NegVDNode, NegVNode)                                    \
   declare_c2_type(FmaVDNode, VectorNode)                                  \
   declare_c2_type(FmaVFNode, VectorNode)                                  \
+  declare_c2_type(FmaVNegDNode, VectorNode)                               \
+  declare_c2_type(FmaVNegFNode, VectorNode)                               \
   declare_c2_type(CMoveVFNode, VectorNode)                                \
   declare_c2_type(CMoveVDNode, VectorNode)                                \
   declare_c2_type(CompressVNode, VectorNode)                              \
@@ -1835,6 +1837,8 @@
   declare_c2_type(OverflowMulLNode, OverflowLNode)                        \
   declare_c2_type(FmaDNode, Node)                                         \
   declare_c2_type(FmaFNode, Node)                                         \
+  declare_c2_type(FmaNegDNode, FmaDNode)                                  \
+  declare_c2_type(FmaNegFNode, FmaFNode)                                  \
   declare_c2_type(CopySignDNode, Node)                                    \
   declare_c2_type(CopySignFNode, Node)                                    \
   declare_c2_type(SignumDNode, Node)                                      \

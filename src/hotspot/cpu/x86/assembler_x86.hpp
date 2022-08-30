@@ -2249,6 +2249,8 @@ private:
   void vdivss(XMMRegister dst, XMMRegister nds, XMMRegister src);
   void vfmadd231sd(XMMRegister dst, XMMRegister nds, XMMRegister src);
   void vfmadd231ss(XMMRegister dst, XMMRegister nds, XMMRegister src);
+  void vfnmadd231sd(XMMRegister dst, XMMRegister nds, XMMRegister src);
+  void vfnmadd231ss(XMMRegister dst, XMMRegister nds, XMMRegister src);
   void vmulsd(XMMRegister dst, XMMRegister nds, Address src);
   void vmulsd(XMMRegister dst, XMMRegister nds, XMMRegister src);
   void vmulss(XMMRegister dst, XMMRegister nds, Address src);
@@ -2319,6 +2321,11 @@ private:
   void vfmadd231ps(XMMRegister dst, XMMRegister nds, XMMRegister src, int vector_len);
   void vfmadd231pd(XMMRegister dst, XMMRegister nds, Address src, int vector_len);
   void vfmadd231ps(XMMRegister dst, XMMRegister nds, Address src, int vector_len);
+
+  void vfnmadd231pd(XMMRegister dst, XMMRegister nds, XMMRegister src, int vector_len);
+  void vfnmadd231ps(XMMRegister dst, XMMRegister nds, XMMRegister src, int vector_len);
+  void vfnmadd231pd(XMMRegister dst, XMMRegister nds, Address src, int vector_len);
+  void vfnmadd231ps(XMMRegister dst, XMMRegister nds, Address src, int vector_len);
 
   // Divide Packed Floating-Point Values
   void divpd(XMMRegister dst, XMMRegister src);

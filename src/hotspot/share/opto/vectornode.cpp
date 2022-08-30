@@ -81,6 +81,10 @@ int VectorNode::opcode(int sopc, BasicType bt) {
     return (bt == T_DOUBLE ? Op_FmaVD : 0);
   case Op_FmaF:
     return (bt == T_FLOAT ? Op_FmaVF : 0);
+  case Op_FmaNegD:
+      return (bt == T_DOUBLE ? Op_FmaVNegD : 0);
+  case Op_FmaNegF:
+      return (bt == T_FLOAT ? Op_FmaVNegF : 0);
   case Op_CMoveF:
     return (bt == T_FLOAT ? Op_CMoveVF : 0);
   case Op_CMoveD:
@@ -571,6 +575,8 @@ void VectorNode::vector_operands(Node* n, uint* start, uint* end) {
     break;
   case Op_FmaD:
   case Op_FmaF:
+  case Op_FmaNegD:
+  case Op_FmaNegF:
     *start = 1;
     *end   = 4; // 3 vector operands
     break;
@@ -718,6 +724,8 @@ VectorNode* VectorNode::make(int vopc, Node* n1, Node* n2, Node* n3, const TypeV
   switch (vopc) {
   case Op_FmaVD: return new FmaVDNode(n1, n2, n3, vt);
   case Op_FmaVF: return new FmaVFNode(n1, n2, n3, vt);
+  case Op_FmaVNegF: return new FmaVNegFNode(n1, n2, n3, vt);
+  case Op_FmaVNegD: return new FmaVNegDNode(n1, n2, n3, vt);
   case Op_SignumVD: return new SignumVDNode(n1, n2, n3, vt);
   case Op_SignumVF: return new SignumVFNode(n1, n2, n3, vt);
   default:

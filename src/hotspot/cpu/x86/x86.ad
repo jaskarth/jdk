@@ -1578,6 +1578,8 @@ const bool Matcher::match_rule_supported(int opcode) {
       break;
     case Op_FmaVD:
     case Op_FmaVF:
+    case Op_FmaVNegF:
+    case Op_FmaVNegD:
       if (!UseFMA) {
         return false;
       }
@@ -2038,6 +2040,8 @@ const bool Matcher::match_rule_supported_vector_masked(int opcode, int vlen, Bas
     // Ternary masked operations
     case Op_FmaVF:
     case Op_FmaVD:
+    case Op_FmaVNegF:
+    case Op_FmaVNegD:
       return true;
 
     case Op_MacroLogicV:
@@ -4015,6 +4019,30 @@ instruct fmaF_reg(regF a, regF b, regF c) %{
   ins_cost(150);
   ins_encode %{
     __ fmaf($c$$XMMRegister, $a$$XMMRegister, $b$$XMMRegister, $c$$XMMRegister);
+  %}
+  ins_pipe( pipe_slow );
+%}
+
+// -a * b + c
+instruct fmaNegD_reg(regD a, regD b, regD c) %{
+  predicate(UseFMA);
+  match(Set c (FmaNegD  c (Binary a b)));
+  format %{ "fnmasd $a,$b,$c\t# $c = $a * $b + $c" %}
+  ins_cost(150);
+  ins_encode %{
+    __ fnmad($c$$XMMRegister, $a$$XMMRegister, $b$$XMMRegister, $c$$XMMRegister);
+  %}
+  ins_pipe( pipe_slow );
+%}
+
+// -a * b + c
+instruct fmaNegF_reg(regF a, regF b, regF c) %{
+  predicate(UseFMA);
+  match(Set c (FmaNegF  c (Binary a b)));
+  format %{ "fnmass $a,$b,$c\t# $c = $a * $b + $c" %}
+  ins_cost(150);
+  ins_encode %{
+    __ fnmaf($c$$XMMRegister, $a$$XMMRegister, $b$$XMMRegister, $c$$XMMRegister);
   %}
   ins_pipe( pipe_slow );
 %}
@@ -8775,6 +8803,59 @@ instruct vfmaD_mem(vec a, memory b, vec c) %{
     assert(UseFMA, "not enabled");
     int vlen_enc = vector_length_encoding(this);
     __ vfmad($c$$XMMRegister, $a$$XMMRegister, $b$$Address, $c$$XMMRegister, vlen_enc);
+  %}
+  ins_pipe( pipe_slow );
+%}
+
+// ============================================================================================
+// a * b + c
+
+instruct vfmaNegF_reg(vec a, vec b, vec c) %{
+  match(Set c (FmaVNegF  c (Binary a b)));
+  format %{ "fnmaps $a,$b,$c\t# $c = $a * $b + $c fma packedF" %}
+  ins_cost(150);
+  ins_encode %{
+    assert(UseFMA, "not enabled");
+    int vlen_enc = vector_length_encoding(this);
+    __ vfnmaf($c$$XMMRegister, $a$$XMMRegister, $b$$XMMRegister, $c$$XMMRegister, vlen_enc);
+  %}
+  ins_pipe( pipe_slow );
+%}
+
+instruct vfmaNegF_mem(vec a, memory b, vec c) %{
+  predicate(Matcher::vector_length_in_bytes(n->in(1)) > 8);
+  match(Set c (FmaVNegF  c (Binary a (LoadVector b))));
+  format %{ "fnmaps $a,$b,$c\t# $c = $a * $b + $c fma packedF" %}
+  ins_cost(150);
+  ins_encode %{
+    assert(UseFMA, "not enabled");
+    int vlen_enc = vector_length_encoding(this);
+    __ vfnmaf($c$$XMMRegister, $a$$XMMRegister, $b$$Address, $c$$XMMRegister, vlen_enc);
+  %}
+  ins_pipe( pipe_slow );
+%}
+
+instruct vfmaNegD_reg(vec a, vec b, vec c) %{
+  match(Set c (FmaVNegD  c (Binary a b)));
+  format %{ "fnmapd $a,$b,$c\t# $c = $a * $b + $c fma packedD" %}
+  ins_cost(150);
+  ins_encode %{
+    assert(UseFMA, "not enabled");
+    int vlen_enc = vector_length_encoding(this);
+    __ vfnmad($c$$XMMRegister, $a$$XMMRegister, $b$$XMMRegister, $c$$XMMRegister, vlen_enc);
+  %}
+  ins_pipe( pipe_slow );
+%}
+
+instruct vfmaNegD_mem(vec a, memory b, vec c) %{
+  predicate(Matcher::vector_length_in_bytes(n->in(1)) > 8);
+  match(Set c (FmaVNegD  c (Binary a (LoadVector b))));
+  format %{ "fnmapd $a,$b,$c\t# $c = $a * $b + $c fma packedD" %}
+  ins_cost(150);
+  ins_encode %{
+    assert(UseFMA, "not enabled");
+    int vlen_enc = vector_length_encoding(this);
+    __ vfnmad($c$$XMMRegister, $a$$XMMRegister, $b$$Address, $c$$XMMRegister, vlen_enc);
   %}
   ins_pipe( pipe_slow );
 %}
