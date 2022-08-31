@@ -1722,6 +1722,7 @@
   declare_c2_type(NegDNode, NegNode)                                      \
   declare_c2_type(AtanDNode, Node)                                        \
   declare_c2_type(SqrtFNode, Node)                                        \
+  declare_c2_type(RSqrtFNode, Node)                                       \
   declare_c2_type(SqrtDNode, Node)                                        \
   declare_c2_type(ReverseBytesINode, Node)                                \
   declare_c2_type(ReverseBytesLNode, Node)                                \

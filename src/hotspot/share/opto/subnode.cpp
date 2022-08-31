@@ -1907,6 +1907,22 @@ const Type* SqrtFNode::Value(PhaseGVN* phase) const {
   return TypeF::make( (float)sqrt( (double)f ) );
 }
 
+const Type* RSqrtFNode::Value(PhaseGVN* phase) const {
+    const Type *t1 = phase->type( in(1) );
+    if( t1 == Type::TOP ) return Type::TOP;
+    if( t1->base() != Type::FloatCon ) return Type::FLOAT;
+    float f = t1->getf();
+    if( f < 0.0f ) return Type::FLOAT;
+    return TypeF::make( 1.0f / (float)sqrt( (double)f ) );
+}
+
+static jlong reverse_bits(jlong val) {
+  jlong res = ((val & 0xF0F0F0F0F0F0F0F0L) >> 4) | ((val & 0x0F0F0F0F0F0F0F0F) << 4);
+  res = ((res & 0xCCCCCCCCCCCCCCCCL) >> 2) | ((res & 0x3333333333333333L) << 2);
+  res = ((res & 0xAAAAAAAAAAAAAAAAL) >> 1) | ((res & 0x5555555555555555L) << 1);
+  return res;
+}
+
 const Type* ReverseINode::Value(PhaseGVN* phase) const {
   const Type *t1 = phase->type( in(1) );
   if (t1 == Type::TOP) {

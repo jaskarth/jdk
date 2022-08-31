@@ -2142,6 +2142,10 @@ private:
   void sqrtss(XMMRegister dst, Address src);
   void sqrtss(XMMRegister dst, XMMRegister src);
 
+  // Reciprocal sqrt
+  void rsqrtss(XMMRegister dst, Address src);
+  void rsqrtss(XMMRegister dst, XMMRegister src);
+
   void std();
 
   void stmxcsr( Address dst );

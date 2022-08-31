@@ -6079,6 +6079,25 @@ void Assembler::sqrtss(XMMRegister dst, Address src) {
   emit_operand(dst, src, 0);
 }
 
+// Reciprocal sqrt
+
+void Assembler::rsqrtss(XMMRegister dst, XMMRegister src) {
+    NOT_LP64(assert(VM_Version::supports_sse(), ""));
+    InstructionAttr attributes(AVX_128bit, /* rex_w */ false, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ false);
+    int encode = simd_prefix_and_encode(dst, dst, src, VEX_SIMD_F3, VEX_OPCODE_0F, &attributes);
+    emit_int16(0x52, (0xC0 | encode));
+}
+
+void Assembler::rsqrtss(XMMRegister dst, Address src) {
+    NOT_LP64(assert(VM_Version::supports_sse(), ""));
+    InstructionMark im(this);
+    InstructionAttr attributes(AVX_128bit, /* rex_w */ false, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ false);
+    attributes.set_address_attributes(/* tuple_type */ EVEX_T1S, /* input_size_in_bits */ EVEX_32bit);
+    simd_prefix(dst, dst, src, VEX_SIMD_F3, VEX_OPCODE_0F, &attributes);
+    emit_int8(0x52);
+    emit_operand(dst, src);
+}
+
 void Assembler::stmxcsr( Address dst) {
   if (UseAVX > 0 ) {
     assert(VM_Version::supports_avx(), "");

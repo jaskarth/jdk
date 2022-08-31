@@ -3651,6 +3651,16 @@ instruct sqrtF_reg(regF dst) %{
   ins_pipe(pipe_slow);
 %}
 
+instruct rsqrtF_reg(regF dst) %{
+  predicate(UseSSE>=1);
+  match(Set dst (RSqrtF dst));
+  format %{ "rsqrtss  $dst, $dst" %}
+  ins_encode %{
+    __ rsqrtss($dst$$XMMRegister, $dst$$XMMRegister);
+  %}
+  ins_pipe(pipe_slow);
+%}
+
 // sqrtsd instruction needs destination register to be pre initialized for best performance
 // Therefore only the instruct rule where the input is pre-loaded into dst register is defined below
 instruct sqrtD_reg(regD dst) %{

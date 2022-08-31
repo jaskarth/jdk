@@ -415,6 +415,19 @@ public final class Math {
                                    // Math.sqrt in software.
     }
 
+    /**
+     * Returns an approximate reciprocal square root of a given number.
+     * This function returns a reciprocal sqrt of arbitrary precision.
+     * Use at your own mortal peril.
+     *
+     * @param   a   a value.
+     * @return  reciprocal square root
+     */
+    @IntrinsicCandidate
+    public static float rsqrt(float a) {
+        return 1.f / (float)StrictMath.sqrt(a);
+    }
+
 
     /**
      * Returns the cube root of a {@code double} value.  For

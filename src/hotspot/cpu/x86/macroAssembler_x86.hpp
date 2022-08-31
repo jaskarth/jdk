@@ -1259,6 +1259,10 @@ public:
   void sqrtss(XMMRegister dst, Address         src) { Assembler::sqrtss(dst, src); }
   void sqrtss(XMMRegister dst, AddressLiteral  src, Register rscratch = noreg);
 
+  void rsqrtss(XMMRegister dst, XMMRegister src)    { Assembler::rsqrtss(dst, src); }
+  void rsqrtss(XMMRegister dst, Address src)        { Assembler::rsqrtss(dst, src); }
+  void rsqrtss(XMMRegister dst, AddressLiteral src);
+
   void subsd(XMMRegister dst, XMMRegister    src) { Assembler::subsd(dst, src); }
   void subsd(XMMRegister dst, Address        src) { Assembler::subsd(dst, src); }
   void subsd(XMMRegister dst, AddressLiteral src, Register rscratch = noreg);
