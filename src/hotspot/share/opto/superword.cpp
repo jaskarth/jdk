@@ -2795,6 +2795,7 @@ bool SuperWord::output() {
         }
         NOT_PRODUCT(if(is_trace_cmov()) {tty->print("SWPointer::output: created new CMove node %d: ", vn->_idx); vn->dump();})
       } else if (opc == Op_FmaD || opc == Op_FmaF || opc == Op_FmaNegD || opc == Op_FmaNegF) {
+          assert(n->req() == 4, "four inputs expected");
         // Promote operands to vector
         Node* in1 = vector_opd(p, 1);
         Node* in2 = vector_opd(p, 2);

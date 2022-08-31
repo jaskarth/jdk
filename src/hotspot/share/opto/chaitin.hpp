@@ -151,7 +151,7 @@ private:
                                 // Meaningful only when _is_scalable is true.
 public:
   int num_regs() const { return _num_regs; }
-  void set_num_regs( int reg ) { assert( _num_regs == reg || !_num_regs, "" ); _num_regs = reg; }
+  void set_num_regs( int reg ) { assert( _num_regs == reg || !_num_regs, "Trying to reset register count, we have %d but got %d", _num_regs, reg); _num_regs = reg; }
 
   uint scalable_reg_slots() { return _scalable_reg_slots; }
   void set_scalable_reg_slots(uint slots) {

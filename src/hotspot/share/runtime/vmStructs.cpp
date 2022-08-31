@@ -1837,8 +1837,8 @@
   declare_c2_type(OverflowMulLNode, OverflowLNode)                        \
   declare_c2_type(FmaDNode, Node)                                         \
   declare_c2_type(FmaFNode, Node)                                         \
-  declare_c2_type(FmaNegDNode, FmaDNode)                                  \
-  declare_c2_type(FmaNegFNode, FmaFNode)                                  \
+  declare_c2_type(FmaNegDNode, Node)                                      \
+  declare_c2_type(FmaNegFNode, Node)                                      \
   declare_c2_type(CopySignDNode, Node)                                    \
   declare_c2_type(CopySignFNode, Node)                                    \
   declare_c2_type(SignumDNode, Node)                                      \
