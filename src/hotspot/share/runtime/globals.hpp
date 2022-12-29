@@ -229,6 +229,9 @@ const int ObjectAlignmentInBytes = 8;
   product(bool, UseFMA, false,                                              \
           "Control whether FMA instructions are used when available")       \
                                                                             \
+  product(bool, DoUnsafeFma, false,                                         \
+          "Enable unsafe optimization of multiply-additions as FMA.")       \
+                                                                            \
   product(bool, UseSHA, false,                                              \
           "Control whether SHA instructions are used when available")       \
                                                                             \

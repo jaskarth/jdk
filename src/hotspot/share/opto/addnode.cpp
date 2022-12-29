@@ -519,6 +519,19 @@ const Type *AddFNode::add_ring( const Type *t0, const Type *t1 ) const {
 
 //------------------------------Ideal------------------------------------------
 Node *AddFNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+
+  if (DoUnsafeFma) {
+    bool is1 = in(1)->Opcode() == Op_MulF;
+    bool is2 = in(2)->Opcode() == Op_MulF;
+    if (is1 ^ is2) {
+      if (is1) {
+        return new FmaFNode(in(0), in(1)->in(1), in(1)->in(2), in(2));
+      } else {
+        return new FmaFNode(in(0), in(2)->in(1), in(2)->in(2), in(1));
+      }
+    }
+  }
+
   // Floating point additions are not associative because of boundary conditions (infinity)
   return commute(phase, this) ? this : NULL;
 }
@@ -550,6 +563,20 @@ const Type *AddDNode::add_ring( const Type *t0, const Type *t1 ) const {
 
 //------------------------------Ideal------------------------------------------
 Node *AddDNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+
+  if (DoUnsafeFma) {
+    bool is1 = in(1)->Opcode() == Op_MulD;
+    bool is2 = in(2)->Opcode() == Op_MulD;
+    if (is1 ^ is2) {
+      if (is1) {
+        return new FmaDNode(in(0), in(1)->in(1), in(1)->in(2), in(2));
+      } else {
+        return new FmaDNode(in(0), in(2)->in(1), in(2)->in(2), in(1));
+      }
+    }
+  }
+
+
   // Floating point additions are not associative because of boundary conditions (infinity)
   return commute(phase, this) ? this : NULL;
 }
