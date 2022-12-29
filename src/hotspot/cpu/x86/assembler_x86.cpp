@@ -6095,7 +6095,7 @@ void Assembler::rsqrtss(XMMRegister dst, Address src) {
     attributes.set_address_attributes(/* tuple_type */ EVEX_T1S, /* input_size_in_bits */ EVEX_32bit);
     simd_prefix(dst, dst, src, VEX_SIMD_F3, VEX_OPCODE_0F, &attributes);
     emit_int8(0x52);
-    emit_operand(dst, src);
+    emit_operand(dst, src, 0);
 }
 
 void Assembler::stmxcsr( Address dst) {
@@ -6848,7 +6848,7 @@ void Assembler::vfnmadd231pd(XMMRegister dst, XMMRegister src1, Address src2, in
     attributes.set_address_attributes(/* tuple_type */ EVEX_FV, /* input_size_in_bits */ EVEX_64bit);
     vex_prefix(src2, src1->encoding(), dst->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_38, &attributes);
     emit_int8((unsigned char)0xBC);
-    emit_operand(dst, src2);
+    emit_operand(dst, src2, 0);
 }
 
 void Assembler::vfnmadd231ps(XMMRegister dst, XMMRegister src1, Address src2, int vector_len) {
@@ -6858,7 +6858,7 @@ void Assembler::vfnmadd231ps(XMMRegister dst, XMMRegister src1, Address src2, in
     attributes.set_address_attributes(/* tuple_type */ EVEX_FV, /* input_size_in_bits */ EVEX_32bit);
     vex_prefix(src2, src1->encoding(), dst->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_38, &attributes);
     emit_int8((unsigned char)0xBC);
-    emit_operand(dst, src2);
+    emit_operand(dst, src2, 0);
 }
 
 ////////
