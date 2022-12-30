@@ -232,6 +232,10 @@ const int ObjectAlignmentInBytes = 8;
   product(bool, DoUnsafeFma, false,                                         \
           "Enable unsafe optimization of multiply-additions as FMA.")       \
                                                                             \
+  product(bool, DoUnsafeNanIgnorantMath, false,                             \
+          "Allow optimization of math without strict adherence to "         \
+          "IEEE-754 NaN requirements")                                      \
+                                                                            \
   product(bool, UseSHA, false,                                              \
           "Control whether SHA instructions are used when available")       \
                                                                             \

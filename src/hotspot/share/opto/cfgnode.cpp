@@ -1751,6 +1751,75 @@ static Node* is_absolute( PhaseGVN *phase, PhiNode *phi_root, int true_path) {
   return x;
 }
 
+//------------------------------is_minmax------------------------------------
+// Check for min/max pattern
+static Node* is_minmax(PhaseGVN* phase, PhiNode* phi_root, int true_path) {
+    if (!DoUnsafeNanIgnorantMath) {
+        return NULL; // Can't do this without unsafe math as it pretends NaN doesn't exist
+    }
+
+    assert(true_path != 0, "only diamond shape graph expected");
+
+    BoolNode *bol = phi_root->in(0)->in(1)->in(0)->in(1)->as_Bool();
+    Node *cmp = bol->in(1);
+
+    int false_path = 3 - true_path;
+
+    // 1: <
+    // 2: >
+    int cmptype = -1;
+
+    bool isDouble = cmp->Opcode() == Op_CmpD;
+    if (cmp->Opcode() == Op_CmpD || cmp->Opcode() == Op_CmpF) {
+        if (bol->_test._test == BoolTest::lt || bol->_test._test == BoolTest::ge) {
+            cmptype = 1;
+        } else if (bol->_test._test == BoolTest::gt || bol->_test._test == BoolTest::le) {
+            cmptype = 2;
+        }
+    }
+
+    if (cmptype == -1) {
+        return NULL;
+    }
+
+    // # in this case is either > or <
+    // a # b ? a : b
+    if (cmp->in(true_path) == phi_root->in(true_path) && cmp->in(false_path) == phi_root->in(false_path)) {
+        if (isDouble) {
+            if (cmptype == 1) {
+                return new MaxDNode(cmp->in(true_path), cmp->in(false_path));
+            } else {
+                return new MinDNode(cmp->in(true_path), cmp->in(false_path));
+            }
+        } else {
+            if (cmptype == 1) {
+                return new MaxFNode(cmp->in(true_path), cmp->in(false_path));
+            } else {
+                return new MinFNode(cmp->in(true_path), cmp->in(false_path));
+            }
+        }
+    }
+
+    // a # b ? b : a
+    if (cmp->in(false_path) == phi_root->in(true_path) && cmp->in(true_path) == phi_root->in(false_path)) {
+        if (isDouble) {
+            if (cmptype == 1) {
+                return new MinDNode(cmp->in(true_path), cmp->in(false_path));
+            } else {
+                return new MaxDNode(cmp->in(true_path), cmp->in(false_path));
+            }
+        } else {
+            if (cmptype == 1) {
+                return new MinFNode(cmp->in(true_path), cmp->in(false_path));
+            } else {
+                return new MaxFNode(cmp->in(true_path), cmp->in(false_path));
+            }
+        }
+    }
+
+    return NULL;
+}
+
 //------------------------------split_once-------------------------------------
 // Helper for split_flow_path
 static void split_once(PhaseIterGVN *igvn, Node *phi, Node *val, Node *n, Node *newn) {
@@ -2140,6 +2209,11 @@ Node *PhiNode::Ideal(PhaseGVN *phase, bool can_reshape) {
     // Check for absolute value
     if( opt == NULL )
       opt = is_absolute(phase, this, true_path);
+
+    // Check for min/max pattern
+    if (opt == NULL) {
+      opt = is_minmax(phase, this, true_path);
+    }
 
     // Check for conditional add
     if( opt == NULL && can_reshape )
