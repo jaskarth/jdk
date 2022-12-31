@@ -847,6 +847,16 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
     }
   }
 
+  // Fold (x << c1) << c2 to x << (c1 + c2)
+  int shiftcon = 0;
+  if (add1_op == Op_LShiftI && const_shift_count(phase, this, &shiftcon)) {
+    const TypeInt *t12 = phase->type(add1->in(2))->isa_int();
+
+    if (t12 && t12->is_con() && (t12->get_con() + shiftcon) < 32) {
+      return new LShiftINode(add1->in(1), phase->intcon(t12->get_con() + shiftcon));
+    }
+  }
+
   // Check for "(x>>c0)<<c0" which just masks off low bits
   if( (add1_op == Op_RShiftI || add1_op == Op_URShiftI ) &&
       add1->in(2) == in(2) )
@@ -967,6 +977,16 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
       Node *lsh = phase->transform( new LShiftLNode( add1->in(1), in(2) ) );
       // Compute X<<con0 + (con1<<con0)
       return new AddLNode( lsh, phase->longcon(t12->get_con() << con));
+    }
+  }
+
+  // Fold (x << c1) << c2 to x << (c1 + c2)
+  int shiftcon = 0;
+  if (add1_op == Op_LShiftL && const_shift_count(phase, this, &shiftcon)) {
+    const TypeInt *t12 = phase->type(add1->in(2))->isa_int();
+
+    if (t12 && t12->is_con() && (t12->get_con() + shiftcon) < 64) {
+      return new LShiftLNode(add1->in(1), phase->intcon(t12->get_con() + shiftcon));
     }
   }
 
@@ -1097,6 +1117,16 @@ Node *RShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
     // Convert to "(x >> shift) & (mask >> shift)"
     Node *shr_nomask = phase->transform( new RShiftINode(mask->in(1), in(2)) );
     return new AndINode(shr_nomask, phase->intcon( maskbits >> shift));
+  }
+
+  // Fold (x >> c1) >> c2 to x >> (c1 + c2)
+  int shiftcon = 0;
+  if (mask->Opcode() == Op_RShiftI && const_shift_count(phase, this, &shiftcon)) {
+    const TypeInt *t12 = phase->type(mask->in(2))->isa_int();
+
+    if (t12 && t12->is_con() && (t12->get_con() + shiftcon) < 32) {
+      return new RShiftINode(mask->in(1), phase->intcon(t12->get_con() + shiftcon));
+    }
   }
 
   // Check for "(short[i] <<16)>>16" which simply sign-extends
@@ -1298,6 +1328,16 @@ Node *URShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
   const int mask = right_n_bits(BitsPerJavaInteger - con);
 
   int in1_op = in(1)->Opcode();
+
+  // Fold (x >> c1) >> c2 to x >> (c1 + c2)
+  int shiftcon = 0;
+  if (in1_op == Op_RShiftI && const_shift_count(phase, this, &shiftcon)) {
+    const TypeInt *t12 = phase->type(in(1)->in(2))->isa_int();
+
+    if (t12 && t12->is_con() && (t12->get_con() + shiftcon) < 64) {
+      return new RShiftINode(in(1)->in(1), phase->intcon(t12->get_con() + shiftcon));
+    }
+  }
 
   // Check for ((x>>>a)>>>b) and replace with (x>>>(a+b)) when a+b < 32
   if( in1_op == Op_URShiftI ) {
