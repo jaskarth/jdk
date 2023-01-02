@@ -3281,10 +3281,10 @@ void MacroAssembler::sqrtss(XMMRegister dst, AddressLiteral src, Register rscrat
 
 void MacroAssembler::rsqrtss(XMMRegister dst, AddressLiteral src) {
     if (reachable(src)) {
-        Assembler::sqrtss(dst, as_Address(src));
+        Assembler::rsqrtss(dst, as_Address(src));
     } else {
         lea(rscratch1, src);
-        Assembler::sqrtss(dst, Address(rscratch1, 0));
+        Assembler::rsqrtss(dst, Address(rscratch1, 0));
     }
 }
 

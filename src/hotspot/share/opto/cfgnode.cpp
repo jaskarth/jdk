@@ -1771,9 +1771,9 @@ static Node* is_minmax(PhaseGVN* phase, PhiNode* phi_root, int true_path) {
 
     bool isDouble = cmp->Opcode() == Op_CmpD;
     if (cmp->Opcode() == Op_CmpD || cmp->Opcode() == Op_CmpF) {
-        if (bol->_test._test == BoolTest::lt || bol->_test._test == BoolTest::ge) {
+        if (bol->_test._test == BoolTest::gt || bol->_test._test == BoolTest::ge) {
             cmptype = 1;
-        } else if (bol->_test._test == BoolTest::gt || bol->_test._test == BoolTest::le) {
+        } else if (bol->_test._test == BoolTest::lt || bol->_test._test == BoolTest::le) {
             cmptype = 2;
         }
     }
@@ -1782,9 +1782,19 @@ static Node* is_minmax(PhaseGVN* phase, PhiNode* phi_root, int true_path) {
         return NULL;
     }
 
+    if (isDouble) {
+      if (phase->type(phi_root->in(true_path))->isa_double() == NULL || phase->type(phi_root->in(false_path))->isa_double() == NULL) {
+        return NULL;
+      }
+    } else {
+      if (phase->type(phi_root->in(true_path))->isa_float() == NULL || phase->type(phi_root->in(false_path))->isa_float() == NULL) {
+        return NULL;
+      }
+    }
+
     // # in this case is either > or <
     // a # b ? a : b
-    if (cmp->in(true_path) == phi_root->in(true_path) && cmp->in(false_path) == phi_root->in(false_path)) {
+    if (cmp->in(1) == phi_root->in(true_path) && cmp->in(2) == phi_root->in(false_path)) {
         if (isDouble) {
             if (cmptype == 1) {
                 return new MaxDNode(cmp->in(true_path), cmp->in(false_path));
@@ -1801,7 +1811,7 @@ static Node* is_minmax(PhaseGVN* phase, PhiNode* phi_root, int true_path) {
     }
 
     // a # b ? b : a
-    if (cmp->in(false_path) == phi_root->in(true_path) && cmp->in(true_path) == phi_root->in(false_path)) {
+    if (cmp->in(2) == phi_root->in(true_path) && cmp->in(1) == phi_root->in(false_path)) {
         if (isDouble) {
             if (cmptype == 1) {
                 return new MinDNode(cmp->in(true_path), cmp->in(false_path));

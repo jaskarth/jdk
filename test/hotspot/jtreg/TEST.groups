@@ -97,6 +97,9 @@ hotspot_vector_1 = \
   -compiler/loopopts/superword/Vec_MulAddS2I.java \
   -compiler/vectorapi/VectorRebracket128Test.java
 
+hotspot_irtests = \
+  compiler/c2/irTests \
+
 hotspot_vector_2 = \
   compiler/intrinsics \
   compiler/codegen/aes \

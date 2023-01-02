@@ -595,7 +595,7 @@ public class IRNode {
 
     public static final String MAX = PREFIX + "MAX" + POSTFIX;
     static {
-        beforeMatchingNameRegex(MAX, "Max(I|L)");
+        beforeMatchingNameRegex(MAX, "Max(I|L|F|D)");
     }
 
     public static final String MAX_I = PREFIX + "MAX_I" + POSTFIX;
@@ -620,7 +620,7 @@ public class IRNode {
 
     public static final String MIN = PREFIX + "MIN" + POSTFIX;
     static {
-        beforeMatchingNameRegex(MIN, "Min(I|L)");
+        beforeMatchingNameRegex(MIN, "Min(I|L|D|F)");
     }
 
     public static final String MIN_I = PREFIX + "MIN_I" + POSTFIX;

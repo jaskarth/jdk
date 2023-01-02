@@ -840,6 +840,8 @@ Node *PhaseGVN::transform_no_reclaim(Node *n) {
   Node* i = apply_ideal(k, /*can_reshape=*/false);
   NOT_PRODUCT(uint loop_count = 1;)
   while (i != NULL) {
+    NOT_PRODUCT(if (!(i->_idx >= k->_idx)) { i->dump(); })
+
     assert(i->_idx >= k->_idx, "Idealize should return new nodes, use Identity to return old nodes" );
     k = i;
 #ifdef ASSERT

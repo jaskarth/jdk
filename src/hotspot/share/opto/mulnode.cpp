@@ -1329,16 +1329,6 @@ Node *URShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
   int in1_op = in(1)->Opcode();
 
-  // Fold (x >> c1) >> c2 to x >> (c1 + c2)
-  int shiftcon = 0;
-  if (in1_op == Op_RShiftI && const_shift_count(phase, this, &shiftcon)) {
-    const TypeInt *t12 = phase->type(in(1)->in(2))->isa_int();
-
-    if (t12 && t12->is_con() && (t12->get_con() + shiftcon) < 64) {
-      return new RShiftINode(in(1)->in(1), phase->intcon(t12->get_con() + shiftcon));
-    }
-  }
-
   // Check for ((x>>>a)>>>b) and replace with (x>>>(a+b)) when a+b < 32
   if( in1_op == Op_URShiftI ) {
     const TypeInt *t12 = phase->type( in(1)->in(2) )->isa_int();
@@ -1641,16 +1631,16 @@ Node *FmaDNode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
     if (is1 ^ is2) {
         if (is1) {
-            return phase->transform(new FmaNegDNode(in(0), in(1)->in(1), in(2), in(3)));
+            return new FmaNegDNode(in(0), in(1)->in(1), in(2), in(3));
         } else if (is2) {
-            return phase->transform(new FmaNegDNode(in(0), in(1), in(2)->in(1), in(3)));
+            return new FmaNegDNode(in(0), in(1), in(2)->in(1), in(3));
         } else {
             assert(false, "should never reach");
         }
     }
 
     if (is1 && is2) {
-        return phase->transform(new FmaDNode(in(0), in(1)->in(1), in(2)->in(1), in(3)));
+        return new FmaDNode(in(0), in(1)->in(1), in(2)->in(1), in(3));
     }
 
     return NULL;
@@ -1685,16 +1675,16 @@ Node *FmaFNode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
     if (is1 ^ is2) {
         if (is1) {
-            return phase->transform(new FmaNegFNode(in(0), in(1)->in(1), in(2), in(3)));
+            return new FmaNegFNode(in(0), in(1)->in(1), in(2), in(3));
         } else if (is2) {
-            return phase->transform(new FmaNegFNode(in(0), in(1), in(2)->in(1), in(3)));
+            return new FmaNegFNode(in(0), in(1), in(2)->in(1), in(3));
         } else {
             assert(false, "should never reach");
         }
     }
 
     if (is1 && is2) {
-        return phase->transform(new FmaFNode(in(0), in(1)->in(1), in(2)->in(1), in(3)));
+        return new FmaFNode(in(0), in(1)->in(1), in(2)->in(1), in(3));
     }
 
     return NULL;
