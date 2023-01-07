@@ -428,6 +428,41 @@ const Type *MulFNode::mul_ring(const Type *t0, const Type *t1) const {
 Node* MulFNode::Ideal(PhaseGVN* phase, bool can_reshape) {
   const TypeF *t2 = phase->type(in(2))->isa_float_constant();
 
+  if (DoUnsafePrecisionMath) {
+    if (t2 != NULL) {
+      Node* i1 = in(1);
+
+      int i1_op = i1->Opcode();
+      if (i1_op == Op_MulF) {
+        // x * c0 * c1 -> x * (c0 * c1)
+
+        const TypeF *i1_t2 = phase->type(i1->in(2))->isa_float_constant();
+
+        if (i1_t2 != NULL) {
+          return new MulFNode(i1->in(1), phase->makecon(TypeF::make(t2->getf() * i1_t2->getf())));
+        }
+      } else if (i1_op == Op_AddF) {
+        // (x + c0) * c1 -> (x * c1) + (c0 * c1)
+
+        const TypeF *i1_t2 = phase->type(i1->in(2))->isa_float_constant();
+
+        if (i1_t2 != NULL) {
+          Node* inner = phase->transform(new MulFNode(i1->in(1), phase->makecon(TypeF::make(t2->getf()))));
+
+          return new AddFNode(inner, phase->makecon(TypeF::make(t2->getf() * i1_t2->getf())));
+        }
+      } else if (i1_op == Op_NegF) {
+        // -x * c0 = x * -c0
+
+        return new MulFNode(i1->in(1), phase->makecon(TypeF::make(-t2->getf())));
+      }
+
+      // (x / z) * y = (x * y) / z ?
+      // C / (X * C2) --> (C / C2) / X
+      // C / (X / C2) --> (C * C2) / X
+    }
+  }
+
   // x * 2 -> x + x
   if (t2 != NULL && t2->getf() == 2) {
     Node* base = in(1);
@@ -450,6 +485,41 @@ const Type *MulDNode::mul_ring(const Type *t0, const Type *t1) const {
 // Check to see if we are multiplying by a constant 2 and convert to add, then try the regular MulNode::Ideal
 Node* MulDNode::Ideal(PhaseGVN* phase, bool can_reshape) {
   const TypeD *t2 = phase->type(in(2))->isa_double_constant();
+
+  if (DoUnsafePrecisionMath) {
+    if (t2 != NULL) {
+      Node* i1 = in(1);
+
+      int i1_op = i1->Opcode();
+      if (i1_op == Op_MulD) {
+        // x * c0 * c1 -> x * (c0 * c1)
+
+        const TypeD *i1_t2 = phase->type(i1->in(2))->isa_double_constant();
+
+        if (i1_t2 != NULL) {
+          return new MulDNode(i1->in(1), phase->makecon(TypeD::make(t2->getd() * i1_t2->getd())));
+        }
+      } else if (i1_op == Op_AddD) {
+        // (x + c0) * c1 -> (x * c1) + (c0 * c1)
+
+        const TypeD *i1_t2 = phase->type(i1->in(2))->isa_double_constant();
+
+        if (i1_t2 != NULL) {
+          Node* inner = phase->transform(new MulDNode(i1->in(1), phase->makecon(TypeD::make(t2->getd()))));
+
+          return new AddDNode(inner, phase->makecon(TypeD::make(t2->getd() * i1_t2->getd())));
+        }
+      } else if (i1_op == Op_NegD) {
+        // -x * c0 = x * -c0
+
+        return new MulDNode(i1->in(1), phase->makecon(TypeD::make(-t2->getd())));
+      }
+
+      // (x / z) * y = (x * y) / z ?
+      // C / (X * C2) --> (C / C2) / X
+      // C / (X / C2) --> (C * C2) / X
+    }
+  }
 
   // x * 2 -> x + x
   if (t2 != NULL && t2->getd() == 2) {

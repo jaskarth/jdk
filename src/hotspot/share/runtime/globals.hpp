@@ -236,6 +236,9 @@ const int ObjectAlignmentInBytes = 8;
           "Allow optimization of math without strict adherence to "         \
           "IEEE-754 NaN requirements")                                      \
                                                                             \
+  product(bool, DoUnsafePrecisionMath, false,                               \
+          "Allow optimization of math without adhering precisely to "       \
+          "floating point accuracy")                                        \
   product(bool, UseSHA, false,                                              \
           "Control whether SHA instructions are used when available")       \
                                                                             \

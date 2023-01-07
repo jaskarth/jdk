@@ -204,7 +204,7 @@
   product(bool, UseSubwordForMaxVector, true,                               \
           "Use Subword Analysis to set maximum vector size")                \
                                                                             \
-  product(bool, UseVectorCmov, false,                                       \
+  product(bool, UseVectorCmov, true,                                        \
           "Use Vectorized Cmov")                                            \
                                                                             \
   develop(intx, UnrollLimitForProfileCheck, 1,                              \
@@ -346,7 +346,7 @@
   product(bool, SuperWordReductions, true,                                  \
           "Enable reductions support in superword.")                        \
                                                                             \
-  product(bool, UseCMoveUnconditionally, false,                             \
+  product(bool, UseCMoveUnconditionally, true,                              \
           "Use CMove (scalar and vector) ignoring profitability test.")     \
                                                                             \
   product(bool, DoReserveCopyInSuperWord, true,                             \

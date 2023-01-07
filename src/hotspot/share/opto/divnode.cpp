@@ -732,18 +732,21 @@ Node *DivFNode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
   // Get the value
   float f = tf->getf();
-  int exp;
-
-  // Only for special case of dividing by a power of 2
-  if( frexp((double)f, &exp) != 0.5 ) return NULL;
-
-  // Limit the range of acceptable exponents
-  if( exp < -126 || exp > 126 ) return NULL;
 
   // Compute the reciprocal
-  float reciprocal = ((float)1.0) / f;
+  float reciprocal = ((float) 1.0) / f;
 
-  assert( frexp((double)reciprocal, &exp) == 0.5, "reciprocal should be power of 2" );
+  if (!DoUnsafePrecisionMath) {
+    int exp;
+
+    // Only for special case of dividing by a power of 2
+    if (frexp((double) f, &exp) != 0.5) return NULL;
+
+    // Limit the range of acceptable exponents
+    if (exp < -126 || exp > 126) return NULL;
+
+    assert(frexp((double) reciprocal, &exp) == 0.5, "reciprocal should be power of 2");
+  }
 
   // return multiplication by the reciprocal
   return (new MulFNode(in(1), phase->makecon(TypeF::make(reciprocal))));
@@ -824,18 +827,21 @@ Node *DivDNode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
   // Get the value
   double d = td->getd();
-  int exp;
-
-  // Only for special case of dividing by a power of 2
-  if( frexp(d, &exp) != 0.5 ) return NULL;
-
-  // Limit the range of acceptable exponents
-  if( exp < -1021 || exp > 1022 ) return NULL;
 
   // Compute the reciprocal
   double reciprocal = 1.0 / d;
 
-  assert( frexp(reciprocal, &exp) == 0.5, "reciprocal should be power of 2" );
+  if (!DoUnsafePrecisionMath) {
+    int exp;
+
+    // Only for special case of dividing by a power of 2
+    if (frexp(d, &exp) != 0.5) return NULL;
+
+    // Limit the range of acceptable exponents
+    if (exp < -1021 || exp > 1022) return NULL;
+
+    assert(frexp(reciprocal, &exp) == 0.5, "reciprocal should be power of 2");
+  }
 
   // return multiplication by the reciprocal
   return (new MulDNode(in(1), phase->makecon(TypeD::make(reciprocal))));
