@@ -1681,6 +1681,12 @@ static Node* is_minmax(PhaseGVN* phase, PhiNode* phi_root, int true_path) {
         return NULL; // Can't do this without unsafe math as it pretends NaN doesn't exist
     }
 
+    // Can't do this without the rules being supported
+    if (!Matcher::match_rule_supported(Op_MinD) || !Matcher::match_rule_supported(Op_MinF)
+        || !Matcher::match_rule_supported(Op_MaxD) || !Matcher::match_rule_supported(Op_MaxF)) {
+      return NULL;
+    }
+
     assert(true_path != 0, "only diamond shape graph expected");
 
     BoolNode *bol = phi_root->in(0)->in(1)->in(0)->in(1)->as_Bool();
