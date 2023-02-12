@@ -31,7 +31,7 @@ import jdk.test.lib.Utils;
 /*
  * @test
  * @library /test/lib /
- * @requires vm.compiler2.enabled
+ * @requires vm.compiler2.enabled & (os.simpleArch == "x64")
  * @run driver compiler.c2.irTests.MinMaxIdentifyIdealizationTests
  */
 public class MinMaxIdentifyIdealizationTests {
