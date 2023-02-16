@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1067,6 +1067,7 @@ static void match_alias_type(Compile* C, Node* n, Node* m) {
     case Op_StrIndexOf:
     case Op_StrIndexOfChar:
     case Op_AryEq:
+    case Op_VectorizedHashCode:
     case Op_CountPositives:
     case Op_MemBarVolatile:
     case Op_MemBarCPUOrder: // %%% these ideals should have narrower adr_type?
@@ -2244,6 +2245,7 @@ bool Matcher::find_shared_visit(MStack& mstack, Node* n, uint opcode, bool& mem_
     case Op_StrIndexOf:
     case Op_StrIndexOfChar:
     case Op_AryEq:
+    case Op_VectorizedHashCode:
     case Op_CountPositives:
     case Op_StrInflatedCopy:
     case Op_StrCompressedCopy:
@@ -2387,12 +2389,6 @@ void Matcher::find_shared_post_visit(Node* n, uint opcode) {
       n->del_req(3);
       break;
     }
-    case Op_VectorCmpMasked: {
-      Node* pair1 = new BinaryNode(n->in(2), n->in(3));
-      n->set_req(2, pair1);
-      n->del_req(3);
-      break;
-    }
     case Op_MacroLogicV: {
       Node* pair1 = new BinaryNode(n->in(1), n->in(2));
       Node* pair2 = new BinaryNode(n->in(3), n->in(4));
@@ -2424,7 +2420,8 @@ void Matcher::find_shared_post_visit(Node* n, uint opcode) {
       break;
     }
     case Op_StrComp:
-    case Op_StrIndexOf: {
+    case Op_StrIndexOf:
+    case Op_VectorizedHashCode: {
       Node* pair1 = new BinaryNode(n->in(2), n->in(3));
       n->set_req(2, pair1);
       Node* pair2 = new BinaryNode(n->in(4),n->in(5));
@@ -2433,9 +2430,9 @@ void Matcher::find_shared_post_visit(Node* n, uint opcode) {
       n->del_req(4);
       break;
     }
+    case Op_EncodeISOArray:
     case Op_StrCompressedCopy:
-    case Op_StrInflatedCopy:
-    case Op_EncodeISOArray: {
+    case Op_StrInflatedCopy: {
       // Restructure into a binary tree for Matching.
       Node* pair = new BinaryNode(n->in(3), n->in(4));
       n->set_req(3, pair);
@@ -2466,6 +2463,7 @@ void Matcher::find_shared_post_visit(Node* n, uint opcode) {
       n->del_req(3);
       break;
     }
+    case Op_VectorCmpMasked:
     case Op_CopySignD:
     case Op_SignumVF:
     case Op_SignumVD:
