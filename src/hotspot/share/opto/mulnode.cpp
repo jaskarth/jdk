@@ -927,11 +927,39 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
     }
   }
 
-  // Check for "(x>>c0)<<c0" which just masks off low bits
-  if( (add1_op == Op_RShiftI || add1_op == Op_URShiftI ) &&
-      add1->in(2) == in(2) )
-    // Convert to "(x & -(1<<c0))"
-    return new AndINode(add1->in(1),phase->intcon( -(1<<con)));
+  // Check for "(x >> C1) << C2" which just masks off low bits
+  if((add1_op == Op_RShiftI || add1_op == Op_URShiftI)) {
+    // TODO: mask con instead of const_shift_count
+    int rshiftcon = maskShiftAmount(phase, add1, BitsPerJavaInteger);
+    if (rshiftcon != 0) {
+      // Special case C1 == C2
+      if (add1->in(2) == in(2)) {
+        // Convert to "(x & -(1 << C1))"
+        return new AndINode(add1->in(1), phase->intcon(-(1 << con)));
+      } else {
+        // FIXME: causes problems!
+//        if (con > rshiftcon) {
+//          // Creates "(x << (C2 - C1)) & -(1 << C2)"
+//          add1->in(1)->dump();
+//          Node* lsh = phase->transform(new LShiftINode(add1->in(1), phase->intcon(con - rshiftcon)));
+//          return new AndINode(lsh, phase->intcon(-(1 << con)));
+//        } else {
+//          assert(con < rshiftcon, "must be");
+//          // Creates "(x >> (C1 - C2)) & -(1 << C2)"
+//
+//          // Handle right shift semantics
+//          Node* rsh;
+//          if (add1_op == Op_RShiftI) {
+//            rsh = phase->transform(new RShiftINode(add1->in(1), phase->intcon(rshiftcon - con)));
+//          } else {
+//            rsh = phase->transform(new URShiftINode(add1->in(1), phase->intcon(rshiftcon - con)));
+//          }
+//
+//          return new AndINode(rsh, phase->intcon(-(1 << con)));
+//        }
+      }
+    }
+  }
 
   // Check for "((x>>c0) & Y)<<c0" which just masks off more low bits
   if( add1_op == Op_AndI ) {
