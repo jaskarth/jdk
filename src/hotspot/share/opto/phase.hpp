@@ -147,6 +147,8 @@ public:
   Phase( PhaseNumber pnum );
 
   static void print_timers();
+
+  void where();
 };
 
 #endif // SHARE_OPTO_PHASE_HPP

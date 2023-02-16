@@ -203,3 +203,8 @@ void Phase::print_timers() {
     }
 
 }
+
+void Phase::where() {
+  C->method()->print_name();
+  tty->print("\n");
+}
