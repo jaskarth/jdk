@@ -37,15 +37,21 @@ public class LShiftINodeIdealizationTests {
         TestFramework.run();
     }
 
-    @Run(test = { "test1", "test2" })
+    @Run(test = { "test1", "test2", "test3", "test4" })
     public void runMethod() {
         int a = RunInfo.getRandom().nextInt();
+        int b = RunInfo.getRandom().nextInt();
+        int c = RunInfo.getRandom().nextInt();
+        int d = RunInfo.getRandom().nextInt();
 
         int min = Integer.MIN_VALUE;
         int max = Integer.MAX_VALUE;
 
         assertResult(0);
         assertResult(a);
+        assertResult(b);
+        assertResult(c);
+        assertResult(d);
         assertResult(min);
         assertResult(max);
     }
@@ -54,6 +60,8 @@ public class LShiftINodeIdealizationTests {
     public void assertResult(int a) {
         Asserts.assertEQ((a >> 2022) << 2022, test1(a));
         Asserts.assertEQ((a >>> 2022) << 2022, test2(a));
+        Asserts.assertEQ((a >> 4) << 8, test3(a));
+        Asserts.assertEQ((a >> 8) << 4, test4(a));
     }
 
     @Test
@@ -70,5 +78,19 @@ public class LShiftINodeIdealizationTests {
     // Checks (x >>> 2022) << 2022 => x & C where C = -(1 << 6)
     public int test2(int x) {
         return (x >>> 2022) << 2022;
+    }
+
+    @Test
+    @IR(failOn = { IRNode.RSHIFT })
+    @IR(counts = { IRNode.AND, "1", IRNode.LSHIFT, "1" })
+    public int test3(int x) {
+        return (x >> 4) << 8;
+    }
+
+    @Test
+    @IR(failOn = { IRNode.LSHIFT })
+    @IR(counts = { IRNode.AND, "1", IRNode.RSHIFT, "1" })
+    public int test4(int x) {
+        return (x >> 8) << 4;
     }
 }

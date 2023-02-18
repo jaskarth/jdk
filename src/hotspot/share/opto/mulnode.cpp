@@ -923,7 +923,11 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
     const TypeInt *t12 = phase->type(add1->in(2))->isa_int();
 
     if (t12 && t12->is_con() && (t12->get_con() + shiftcon) < 32) {
-      return new LShiftINode(add1->in(1), phase->intcon(t12->get_con() + shiftcon));
+      if (phase->is_IterGVN()) {
+        return new LShiftINode(add1->in(1), phase->intcon(t12->get_con() + shiftcon));
+      } else {
+        phase->record_for_igvn(this);
+      }
     }
   }
 
@@ -937,26 +941,28 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
         // Convert to "(x & -(1 << C1))"
         return new AndINode(add1->in(1), phase->intcon(-(1 << con)));
       } else {
-        // FIXME: causes problems!
-//        if (con > rshiftcon) {
-//          // Creates "(x << (C2 - C1)) & -(1 << C2)"
-//          add1->in(1)->dump();
-//          Node* lsh = phase->transform(new LShiftINode(add1->in(1), phase->intcon(con - rshiftcon)));
-//          return new AndINode(lsh, phase->intcon(-(1 << con)));
-//        } else {
-//          assert(con < rshiftcon, "must be");
-//          // Creates "(x >> (C1 - C2)) & -(1 << C2)"
-//
-//          // Handle right shift semantics
-//          Node* rsh;
-//          if (add1_op == Op_RShiftI) {
-//            rsh = phase->transform(new RShiftINode(add1->in(1), phase->intcon(rshiftcon - con)));
-//          } else {
-//            rsh = phase->transform(new URShiftINode(add1->in(1), phase->intcon(rshiftcon - con)));
-//          }
-//
-//          return new AndINode(rsh, phase->intcon(-(1 << con)));
-//        }
+        if (phase->is_IterGVN()) {
+          if (con > rshiftcon) {
+            // Creates "(x << (C2 - C1)) & -(1 << C2)"
+            Node* lsh = phase->transform(new LShiftINode(add1->in(1), phase->intcon(con - rshiftcon)));
+            return new AndINode(lsh, phase->intcon(-(1 << con)));
+          } else {
+            assert(con < rshiftcon, "must be");
+            // Creates "(x >> (C1 - C2)) & -(1 << C2)"
+
+            // Handle right shift semantics
+            Node* rsh;
+            if (add1_op == Op_RShiftI) {
+              rsh = phase->transform(new RShiftINode(add1->in(1), phase->intcon(rshiftcon - con)));
+            } else {
+              rsh = phase->transform(new URShiftINode(add1->in(1), phase->intcon(rshiftcon - con)));
+            }
+
+            return new AndINode(rsh, phase->intcon(-(1 << con)));
+          }
+        } else {
+          phase->record_for_igvn(this);
+        }
       }
     }
   }
@@ -1084,7 +1090,11 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
     const TypeInt *t12 = phase->type(add1->in(2))->isa_int();
 
     if (t12 && t12->is_con() && (t12->get_con() + shiftcon) < 64) {
-      return new LShiftLNode(add1->in(1), phase->intcon(t12->get_con() + shiftcon));
+      if (phase->is_IterGVN()) {
+        return new LShiftLNode(add1->in(1), phase->intcon(t12->get_con() + shiftcon));
+      } else {
+        phase->record_for_igvn(this);
+      }
     }
   }
 
