@@ -412,6 +412,10 @@ public class IRNode {
     static {
         beforeMatchingNameRegex(FMA_V, "FmaV(F|D)");
     }
+    public static final String FMA_NEG_V = PREFIX + "FMA_NEG_V" + POSTFIX;
+    static {
+        beforeMatchingNameRegex(FMA_V, "FmaVNeg(F|D)");
+    }
 
     public static final String IF = PREFIX + "IF" + POSTFIX;
     static {
