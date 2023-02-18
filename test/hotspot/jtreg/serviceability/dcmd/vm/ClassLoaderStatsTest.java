@@ -36,6 +36,7 @@
  * @test
  * @summary Test of diagnostic command VM.classloader_stats (-UseCCP)
  * @library /test/lib
+ * @requires (os.simpleArch == "x64")
  * @modules java.base/jdk.internal.misc
  *          java.compiler
  *          java.management
