@@ -24,6 +24,7 @@
 package com.sun.hotspot.igv.data.serialization;
 
 import com.sun.hotspot.igv.data.*;
+import com.sun.hotspot.igv.data.Properties;
 import com.sun.hotspot.igv.data.serialization.XMLParser.ElementHandler;
 import com.sun.hotspot.igv.data.serialization.XMLParser.HandoverElementHandler;
 import com.sun.hotspot.igv.data.serialization.XMLParser.TopElementHandler;
@@ -31,10 +32,9 @@ import com.sun.hotspot.igv.data.services.GroupCallback;
 import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
@@ -48,7 +48,7 @@ import org.xml.sax.XMLReader;
  * @author Thomas Wuerthinger
  */
 public class Parser implements GraphParser {
-
+    public static final List<Parser> LIVE_PARSERS = new ArrayList<>();
     public static final String INDENT = "  ";
     public static final String TOP_ELEMENT = "graphDocument";
     public static final String GROUP_ELEMENT = "group";
@@ -208,7 +208,7 @@ public class Parser implements GraphParser {
         protected InputGraph start() throws SAXException {
             String name = readAttribute(GRAPH_NAME_PROPERTY);
             InputGraph curGraph = new InputGraph(name);
-            if (differenceEncoding.get(getParentObject())) {
+            if (differenceEncoding.containsKey(getParentObject()) && differenceEncoding.get(getParentObject())) {
                 InputGraph previous = lastParsedGraph.get(getParentObject());
                 lastParsedGraph.put(getParentObject(), curGraph);
                 if (previous != null) {
@@ -516,6 +516,8 @@ public class Parser implements GraphParser {
         nodeHandler.addChild(propertiesHandler);
         propertiesHandler.addChild(propertyHandler);
         groupPropertiesHandler.addChild(propertyHandler);
+
+        LIVE_PARSERS.add(this);
     }
 
     // Returns a new GraphDocument object deserialized from an XML input source.
@@ -539,6 +541,11 @@ public class Parser implements GraphParser {
             monitor.setState("Finished parsing");
         }
         return graphDocument;
+    }
+
+    public void clear() {
+        this.lastParsedGraph.clear();
+        this.differenceEncoding.clear();
     }
 
     // Whether the parser is allowed to defer connecting the parsed elements.

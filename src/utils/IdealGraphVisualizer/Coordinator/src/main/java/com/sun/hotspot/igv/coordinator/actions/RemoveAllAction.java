@@ -26,6 +26,8 @@ package com.sun.hotspot.igv.coordinator.actions;
 
 import com.sun.hotspot.igv.coordinator.OutlineTopComponent;
 import javax.swing.Action;
+
+import com.sun.hotspot.igv.data.serialization.Parser;
 import org.openide.util.HelpCtx;
 import org.openide.util.NbBundle;
 import org.openide.util.actions.CallableSystemAction;
@@ -63,5 +65,9 @@ public final class RemoveAllAction extends CallableSystemAction {
     @Override
     public void performAction() {
         OutlineTopComponent.findInstance().clear();
+        for (Parser p : Parser.LIVE_PARSERS) {
+            p.clear();
+        }
+        System.gc();
     }
 }
