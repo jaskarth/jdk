@@ -983,11 +983,16 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
       int rshiftcon = maskShiftAmount(phase, add2, BitsPerJavaInteger);
       if (rshiftcon > 0) {
-        // z = x << c0
-        Node* z = phase->transform(new LShiftINode(add2, phase->intcon(con)));
+        if (phase->is_IterGVN()) {
 
-        Node *y_sh = phase->transform(new LShiftINode(add1->in(2), phase->intcon(con)));
-        return new AndINode(z, y_sh);
+          // z = x << c0
+          Node *z = phase->transform(new LShiftINode(add2, phase->intcon(con)));
+
+          Node *y_sh = phase->transform(new LShiftINode(add1->in(2), phase->intcon(con)));
+          return new AndINode(z, y_sh);
+        } else {
+          phase->record_for_igvn(this);
+        }
       }
     }
   }
