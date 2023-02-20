@@ -971,22 +971,24 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
   if( add1_op == Op_AndI ) {
     Node *add2 = add1->in(1);
     int add2_op = add2->Opcode();
-    if((add2_op == Op_RShiftI || add2_op == Op_URShiftI)) {
+    if(add2_op == Op_RShiftI || add2_op == Op_URShiftI) {
       // we consider a sequence where:
       // ((x >> c0) & y) << c1
-      Node* z;
       if (add2->in(2) == in(2)) {
         // special case c0 == c1
-        // z = x
-        z = add2->in(1);
-      } else if (maskShiftAmount(phase, add2, BitsPerJavaInteger) != 0) {
-        // z = x << c0
-        z = phase->transform(new LShiftINode(add2, phase->intcon(con)));
+        // Convert to "(z & (Y<<c0))"
+        Node *y_sh = phase->transform(new LShiftINode(add1->in(2), phase->intcon(con)));
+        return new AndINode(add2->in(1), y_sh);
       }
 
-      // Convert to "(z & (Y<<c0))"
-      Node *y_sh = phase->transform(new LShiftINode(add1->in(2), in(2)));
-      return new AndINode(z, y_sh);
+      int rshiftcon = maskShiftAmount(phase, add2, BitsPerJavaInteger);
+      if (rshiftcon > 0) {
+        // z = x << c0
+        Node* z = phase->transform(new LShiftINode(add2, phase->intcon(con)));
+
+        Node *y_sh = phase->transform(new LShiftINode(add1->in(2), phase->intcon(con)));
+        return new AndINode(z, y_sh);
+      }
     }
   }
 
