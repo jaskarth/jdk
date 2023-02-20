@@ -1116,21 +1116,67 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
     }
   }
 
-  // Check for "(x>>c0)<<c0" which just masks off low bits
-  if( (add1_op == Op_RShiftL || add1_op == Op_URShiftL ) &&
-      add1->in(2) == in(2) )
-    // Convert to "(x & -(1<<c0))"
-    return new AndLNode(add1->in(1),phase->longcon( -(CONST64(1)<<con)));
+  // Check for "(x >> C1) << C2" which just masks off low bits
+  if((add1_op == Op_RShiftL || add1_op == Op_URShiftL)) {
+    int rshiftcon = maskShiftAmount(phase, add1, BitsPerJavaLong);
+    if (rshiftcon != 0) {
+      // Special case C1 == C2
+      if (add1->in(2) == in(2)) {
+        // Convert to "(x & -(1 << C1))"
+        return new AndLNode(add1->in(1), phase->longcon(-(CONST64(1) << con)));
+      } else {
+        if (phase->is_IterGVN()) {
+          if (con > rshiftcon) {
+            // Creates "(x << (C2 - C1)) & -(1 << C2)"
+            Node* lsh = phase->transform(new LShiftLNode(add1->in(1), phase->longcon(con - rshiftcon)));
+            return new AndLNode(lsh, phase->longcon(-(CONST64(1) << con)));
+          } else {
+            assert(con < rshiftcon, "must be");
+            // Creates "(x >> (C1 - C2)) & -(1 << C2)"
+
+            // Handle right shift semantics
+            Node* rsh;
+            if (add1_op == Op_RShiftL) {
+              rsh = phase->transform(new RShiftLNode(add1->in(1), phase->longcon(rshiftcon - con)));
+            } else {
+              rsh = phase->transform(new URShiftLNode(add1->in(1), phase->longcon(rshiftcon - con)));
+            }
+
+            return new AndLNode(rsh, phase->longcon(-(CONST64(1) << con)));
+          }
+        } else {
+          phase->record_for_igvn(this);
+        }
+      }
+    }
+  }
 
   // Check for "((x>>c0) & Y)<<c0" which just masks off more low bits
   if( add1_op == Op_AndL ) {
     Node *add2 = add1->in(1);
     int add2_op = add2->Opcode();
-    if( (add2_op == Op_RShiftL || add2_op == Op_URShiftL ) &&
-        add2->in(2) == in(2) ) {
-      // Convert to "(x & (Y<<c0))"
-      Node *y_sh = phase->transform( new LShiftLNode( add1->in(2), in(2) ) );
-      return new AndLNode( add2->in(1), y_sh );
+    if(add2_op == Op_RShiftL || add2_op == Op_URShiftL) {
+      // we consider a sequence where:
+      // ((x >> c0) & y) << c1
+      if (add2->in(2) == in(2)) {
+        // special case c0 == c1
+        // Convert to "(z & (Y<<c0))"
+        Node *y_sh = phase->transform(new LShiftLNode(add1->in(2), phase->longcon(con)));
+        return new AndLNode(add2->in(1), y_sh);
+      }
+
+      int rshiftcon = maskShiftAmount(phase, add2, BitsPerJavaLong);
+      if (rshiftcon > 0) {
+        if (phase->is_IterGVN()) {
+          // z = x << c0
+          Node *z = phase->transform(new LShiftLNode(add2, phase->longcon(con)));
+
+          Node *y_sh = phase->transform(new LShiftLNode(add1->in(2), phase->longcon(con)));
+          return new AndLNode(z, y_sh);
+        } else {
+          phase->record_for_igvn(this);
+        }
+      }
     }
   }
 
