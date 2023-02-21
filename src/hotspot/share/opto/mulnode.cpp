@@ -1128,7 +1128,7 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
         if (phase->is_IterGVN()) {
           if (con > rshiftcon) {
             // Creates "(x << (C2 - C1)) & -(1 << C2)"
-            Node* lsh = phase->transform(new LShiftLNode(add1->in(1), phase->longcon(con - rshiftcon)));
+            Node* lsh = phase->transform(new LShiftLNode(add1->in(1), phase->intcon(con - rshiftcon)));
             return new AndLNode(lsh, phase->longcon(-(CONST64(1) << con)));
           } else {
             assert(con < rshiftcon, "must be");
@@ -1137,9 +1137,9 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
             // Handle right shift semantics
             Node* rsh;
             if (add1_op == Op_RShiftL) {
-              rsh = phase->transform(new RShiftLNode(add1->in(1), phase->longcon(rshiftcon - con)));
+              rsh = phase->transform(new RShiftLNode(add1->in(1), phase->intcon(rshiftcon - con)));
             } else {
-              rsh = phase->transform(new URShiftLNode(add1->in(1), phase->longcon(rshiftcon - con)));
+              rsh = phase->transform(new URShiftLNode(add1->in(1), phase->intcon(rshiftcon - con)));
             }
 
             return new AndLNode(rsh, phase->longcon(-(CONST64(1) << con)));
@@ -1161,7 +1161,7 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
       if (add2->in(2) == in(2)) {
         // special case c0 == c1
         // Convert to "(z & (Y<<c0))"
-        Node *y_sh = phase->transform(new LShiftLNode(add1->in(2), phase->longcon(con)));
+        Node *y_sh = phase->transform(new LShiftLNode(add1->in(2), phase->intcon(con)));
         return new AndLNode(add2->in(1), y_sh);
       }
 
@@ -1169,9 +1169,9 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
       if (rshiftcon > 0) {
         if (phase->is_IterGVN()) {
           // z = x << c0
-          Node *z = phase->transform(new LShiftLNode(add2, phase->longcon(con)));
+          Node *z = phase->transform(new LShiftLNode(add2, phase->intcon(con)));
 
-          Node *y_sh = phase->transform(new LShiftLNode(add1->in(2), phase->longcon(con)));
+          Node *y_sh = phase->transform(new LShiftLNode(add1->in(2), phase->intcon(con)));
           return new AndLNode(z, y_sh);
         } else {
           phase->record_for_igvn(this);
