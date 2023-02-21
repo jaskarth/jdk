@@ -519,6 +519,30 @@ const Type *AddFNode::add_ring( const Type *t0, const Type *t1 ) const {
 
 //------------------------------Ideal------------------------------------------
 Node *AddFNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+  const Type *t2 = phase->type( in(2) );
+
+  if (DoUnsafePrecisionMath) {
+    if (t2->isa_float_constant()) {
+      Node* i1 = in(1);
+
+      int i1_op = i1->Opcode();
+      if (i1_op == Op_AddF) {
+        // (x + c0) + c1 = (x + (c1 + c0))
+        const TypeF *i1_t2 = phase->type(i1->in(2))->isa_float_constant();
+
+        if (i1_t2) {
+          return new AddFNode(i1->in(1), phase->makecon(TypeF::make(t2->getf() + i1_t2->getf())));
+        }
+      } else if (i1_op == Op_SubF) {
+        // (x - c0) + c1 = (x + (c1 - c0))
+        const TypeF *i1_t2 = phase->type(i1->in(2))->isa_float_constant();
+
+        if (i1_t2) {
+          return new AddFNode(i1->in(1), phase->makecon(TypeF::make(t2->getf() - i1_t2->getf())));
+        }
+      }
+    }
+  }
 
   if (DoUnsafeFma) {
     bool is1 = in(1)->Opcode() == Op_MulF;
@@ -563,6 +587,30 @@ const Type *AddDNode::add_ring( const Type *t0, const Type *t1 ) const {
 
 //------------------------------Ideal------------------------------------------
 Node *AddDNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+  const Type *t2 = phase->type( in(2) );
+
+  if (DoUnsafePrecisionMath) {
+    if (t2->isa_double_constant()) {
+      Node* i1 = in(1);
+
+      int i1_op = i1->Opcode();
+      if (i1_op == Op_AddD) {
+        // (x + c0) + c1 = (x + (c1 + c0))
+        const TypeD *i1_t2 = phase->type(i1->in(2))->isa_double_constant();
+
+        if (i1_t2) {
+          return new AddDNode(i1->in(1), phase->makecon(TypeD::make(t2->getd() + i1_t2->getd())));
+        }
+      } else if (i1_op == Op_SubD) {
+        // (x - c0) + c1 = (x + (c1 - c0))
+        const TypeD *i1_t2 = phase->type(i1->in(2))->isa_double_constant();
+
+        if (i1_t2) {
+          return new AddDNode(i1->in(1), phase->makecon(TypeD::make(t2->getd() - i1_t2->getd())));
+        }
+      }
+    }
+  }
 
   if (DoUnsafeFma) {
     bool is1 = in(1)->Opcode() == Op_MulD;

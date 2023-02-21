@@ -551,6 +551,29 @@ Node *SubFNode::Ideal(PhaseGVN *phase, bool can_reshape) {
     // return new (phase->C, 3) AddFNode(in(1), phase->makecon( TypeF::make(-t2->getf()) ) );
   }
 
+  if (DoUnsafePrecisionMath) {
+    if (t2->isa_float_constant()) {
+      Node* i1 = in(1);
+
+      int i1_op = i1->Opcode();
+      if (i1_op == Op_AddF) {
+        // (x + c0) - c1 = (x - (c1 - c0))
+        const TypeF *i1_t2 = phase->type(i1->in(2))->isa_float_constant();
+
+        if (i1_t2) {
+          return new SubFNode(i1->in(1), phase->makecon(TypeF::make(t2->getf() - i1_t2->getf())));
+        }
+      } else if (i1_op == Op_SubF) {
+        // (x - c0) - c1 = (x - (c1 + c0))
+        const TypeF *i1_t2 = phase->type(i1->in(2))->isa_float_constant();
+
+        if (i1_t2) {
+          return new SubFNode(i1->in(1), phase->makecon(TypeF::make(t2->getf() + i1_t2->getf())));
+        }
+      }
+    }
+  }
+
   // Cannot replace 0.0-X with -X because a 'fsub' bytecode computes
   // 0.0-0.0 as +0.0, while a 'fneg' bytecode computes -0.0.
   //if( phase->type(in(1)) == TypeF::ZERO )
@@ -584,6 +607,29 @@ Node *SubDNode::Ideal(PhaseGVN *phase, bool can_reshape){
   // Convert "x-c0" into "x+ -c0".
   if( t2->base() == Type::DoubleCon ) { // Might be bottom or top...
     // return new (phase->C, 3) AddDNode(in(1), phase->makecon( TypeD::make(-t2->getd()) ) );
+  }
+
+  if (DoUnsafePrecisionMath) {
+    if (t2->isa_double_constant()) {
+      Node* i1 = in(1);
+
+      int i1_op = i1->Opcode();
+      if (i1_op == Op_AddD) {
+        // (x + c0) - c1 = (x - (c1 - c0))
+        const TypeD *i1_t2 = phase->type(i1->in(2))->isa_double_constant();
+
+        if (i1_t2) {
+          return new SubDNode(i1->in(1), phase->makecon(TypeD::make(t2->getd() - i1_t2->getd())));
+        }
+      } else if (i1_op == Op_SubD) {
+        // (x - c0) - c1 = (x - (c1 + c0))
+        const TypeD *i1_t2 = phase->type(i1->in(2))->isa_double_constant();
+
+        if (i1_t2) {
+          return new SubDNode(i1->in(1), phase->makecon(TypeD::make(t2->getd() + i1_t2->getd())));
+        }
+      }
+    }
   }
 
   // Cannot replace 0.0-X with -X because a 'dsub' bytecode computes
