@@ -660,6 +660,7 @@ class Compile : public Phase {
   bool should_print_phase(CompilerPhaseType cpt);
 
   void print_method(CompilerPhaseType cpt, int level, Node* n = nullptr);
+  void print_method(PhaseGVN* phase, CompilerPhaseType cpt, int level, Node* n = nullptr);
 
 #ifndef PRODUCT
   void igv_print_method_to_file(const char* phase_name = "Debug", bool append = false);

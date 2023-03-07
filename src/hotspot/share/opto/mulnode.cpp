@@ -909,6 +909,10 @@ const Type* LShiftINode::Value(PhaseGVN* phase) const {
   // unless this could lead to an overflow.
   if (!r1->is_con()) {
     jint lo = r1->_lo, hi = r1->_hi;
+
+    // Calculate bit liveness
+
+
     if (((lo << shift) >> shift) == lo &&
         ((hi << shift) >> shift) == hi) {
       // No overflow.  The range shifts up cleanly.
@@ -916,6 +920,7 @@ const Type* LShiftINode::Value(PhaseGVN* phase) const {
                            (jint)hi << (jint)shift,
                            MAX2(r1->_widen,r2->_widen));
     }
+
     return TypeInt::INT;
   }
 

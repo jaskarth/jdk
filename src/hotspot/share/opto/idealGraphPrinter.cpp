@@ -28,6 +28,7 @@
 #include "opto/idealGraphPrinter.hpp"
 #include "opto/machnode.hpp"
 #include "opto/parse.hpp"
+#include "opto/phaseX.hpp"
 #include "runtime/threadCritical.hpp"
 #include "runtime/threadSMR.hpp"
 #include "utilities/stringUtils.hpp"
@@ -346,7 +347,7 @@ void IdealGraphPrinter::set_traverse_outs(bool b) {
   _traverse_outs = b;
 }
 
-void IdealGraphPrinter::visit_node(Node *n, bool edges, VectorSet* temp_set) {
+void IdealGraphPrinter::visit_node(PhaseGVN* phase, Node *n, bool edges, VectorSet* temp_set) {
 
   if (edges) {
 
@@ -376,6 +377,12 @@ void IdealGraphPrinter::visit_node(Node *n, bool edges, VectorSet* temp_set) {
     print_prop(NODE_NAME_PROPERTY, (const char *)node->Name());
     const Type *t = node->bottom_type();
     print_prop("type", t->msg());
+    if (phase) {
+      buffer[0] = 0;
+      stringStream gvnStr(buffer, sizeof(buffer) - 1);
+      phase->type(n)->dump_on(&gvnStr);
+      print_prop("gvn_type", buffer);
+    }
     print_prop("idx", node->_idx);
 #ifdef ASSERT
     print_prop("debug_idx", node->_debug_idx);
@@ -727,7 +734,7 @@ Node* IdealGraphPrinter::get_load_node(const Node* node) {
   return load;
 }
 
-void IdealGraphPrinter::walk_nodes(Node* start, bool edges, VectorSet* temp_set) {
+void IdealGraphPrinter::walk_nodes(PhaseGVN* phase, Node* start, bool edges, VectorSet* temp_set) {
   VectorSet visited;
   GrowableArray<Node *> nodeStack(Thread::current()->resource_area(), 0, 0, nullptr);
   nodeStack.push(start);
@@ -748,7 +755,7 @@ void IdealGraphPrinter::walk_nodes(Node* start, bool edges, VectorSet* temp_set)
       continue;
     }
 
-    visit_node(n, edges, temp_set);
+    visit_node(phase, n, edges, temp_set);
 
     if (_traverse_outs) {
       for (DUIterator i = n->outs(); n->has_out(i); i++) {
@@ -765,13 +772,17 @@ void IdealGraphPrinter::walk_nodes(Node* start, bool edges, VectorSet* temp_set)
 }
 
 void IdealGraphPrinter::print_method(const char *name, int level) {
+  print_method(nullptr, name, level);
+}
+
+void IdealGraphPrinter::print_method(PhaseGVN* phase, const char *name, int level) {
   if (C->should_print_igv(level)) {
-    print(name, (Node *) C->root());
+    print(phase, name, (Node *) C->root());
   }
 }
 
 // Print current ideal graph
-void IdealGraphPrinter::print(const char *name, Node *node) {
+void IdealGraphPrinter::print(PhaseGVN* phase, const char *name, Node *node) {
 
   if (!_current_method || !_should_send_method || node == NULL) return;
 
@@ -795,11 +806,11 @@ void IdealGraphPrinter::print(const char *name, Node *node) {
       }
     }
   }
-  walk_nodes(node, false, &temp_set);
+  walk_nodes(phase, node, false, &temp_set);
   tail(NODES_ELEMENT);
 
   head(EDGES_ELEMENT);
-  walk_nodes(node, true, &temp_set);
+  walk_nodes(phase, node, true, &temp_set);
   tail(EDGES_ELEMENT);
   if (C->cfg() != NULL) {
     head(CONTROL_FLOW_ELEMENT);

@@ -2219,13 +2219,13 @@ void Compile::Optimize() {
 
   if (failing())  return;
 
-  print_method(PHASE_ITER_GVN1, 2);
+  print_method(&igvn, PHASE_ITER_GVN1, 2);
 
   process_for_unstable_if_traps(igvn);
 
   inline_incrementally(igvn);
 
-  print_method(PHASE_INCREMENTAL_INLINE, 2);
+  print_method(&igvn, PHASE_INCREMENTAL_INLINE, 2);
 
   if (failing())  return;
 
@@ -2366,7 +2366,7 @@ void Compile::Optimize() {
     TracePhase tp("ccp", &timers[_t_ccp]);
     ccp.do_transform();
   }
-  print_method(PHASE_CCP1, 2);
+  print_method(&ccp, PHASE_CCP1, 2);
 
   assert( true, "Break here to ccp.dump_old2new_map()");
 
@@ -2376,7 +2376,7 @@ void Compile::Optimize() {
     igvn = ccp;
     igvn.optimize();
   }
-  print_method(PHASE_ITER_GVN2, 2);
+  print_method(&ccp, PHASE_ITER_GVN2, 2);
 
   if (failing())  return;
 
@@ -5048,6 +5048,10 @@ void Compile::sort_macro_nodes() {
 }
 
 void Compile::print_method(CompilerPhaseType cpt, int level, Node* n) {
+  print_method(nullptr, cpt, level, n);
+}
+
+void Compile::print_method(PhaseGVN* phase, CompilerPhaseType cpt, int level, Node* n) {
   EventCompilerPhase event;
   if (event.should_commit()) {
     CompilerEvent::PhaseEvent::post(event, C->_latest_stage_start_counter, cpt, C->_compile_id, level);
@@ -5062,7 +5066,7 @@ void Compile::print_method(CompilerPhaseType cpt, int level, Node* n) {
 
   const char* name = ss.as_string();
   if (should_print_igv(level)) {
-    _igv_printer->print_method(name, level);
+    _igv_printer->print_method(phase, name, level);
   }
   if (should_print_phase(cpt)) {
     print_ideal_ir(CompilerPhaseTypeHelper::to_name(cpt));
@@ -5181,7 +5185,7 @@ void Compile::igv_print_method_to_file(const char* phase_name, bool append) {
     _debug_file_printer->update_compiled_method(C->method());
   }
   tty->print_cr("Method %s to %s", append ? "appended" : "printed", file_name);
-  _debug_file_printer->print(phase_name, (Node*)C->root());
+  _debug_file_printer->print(nullptr, phase_name, (Node*)C->root());
 }
 
 void Compile::igv_print_method_to_network(const char* phase_name) {
@@ -5191,7 +5195,7 @@ void Compile::igv_print_method_to_network(const char* phase_name) {
     _debug_network_printer->update_compiled_method(C->method());
   }
   tty->print_cr("Method printed over network stream to IGV");
-  _debug_network_printer->print(phase_name, (Node*)C->root());
+  _debug_network_printer->print(nullptr, phase_name, (Node*)C->root());
 }
 #endif
 

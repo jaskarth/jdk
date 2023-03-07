@@ -568,13 +568,27 @@ public:
   static const TypeInteger* minus_1(BasicType type);
 };
 
+enum BitType {
+  ZERO,
+  ONE,
+  UNKNOWN
+};
 
+static const julong UNKNOWN_INT_BITS = 0xAAAAAAAAAAAAAAAA;
 
 //------------------------------TypeInt----------------------------------------
 // Class of integer ranges, the set of integers between a lower bound and an
 // upper bound, inclusive.
 class TypeInt : public TypeInteger {
-  TypeInt( jint lo, jint hi, int w );
+  TypeInt(jint lo, jint hi, int w, julong livebits);
+private:
+  // Tracks the bit liveness of an int, using 2 bits to track each data bit.
+  // 0 - Is always 0.
+  // 1 - Is always 1.
+  // 2 - Is opaque to the compiler.
+  // Indexing starts where bits 01 map to bit 0 on the int.
+  //
+  julong _livebits;
 protected:
   virtual const Type *filter_helper(const Type *kills, bool include_speculative) const;
 
@@ -589,6 +603,7 @@ public:
   static const TypeInt *make(jint lo);
   // must always specify w
   static const TypeInt *make(jint lo, jint hi, int w);
+  static const TypeInt *make(jint lo, jint hi, int w, julong livebits);
 
   // Check for single integer
   bool is_con() const { return _lo==_hi; }

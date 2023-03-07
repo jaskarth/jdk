@@ -36,6 +36,7 @@
 class Compile;
 class PhaseIFG;
 class PhaseChaitin;
+class PhaseGVN;
 class Matcher;
 class Node;
 class InlineTree;
@@ -98,12 +99,12 @@ class IdealGraphPrinter : public CHeapObj<mtCompiler> {
 
   void print_method(ciMethod *method, int bci, InlineTree *tree);
   void print_inline_tree(InlineTree *tree);
-  void visit_node(Node *n, bool edges, VectorSet* temp_set);
+  void visit_node(PhaseGVN* phase, Node *n, bool edges, VectorSet* temp_set);
   void print_field(const Node* node);
   ciField* get_field(const Node* node);
   ciField* find_source_field_of_array_access(const Node* node, uint& depth);
   static Node* get_load_node(const Node* node);
-  void walk_nodes(Node *start, bool edges, VectorSet* temp_set);
+  void walk_nodes(PhaseGVN* phase, Node *start, bool edges, VectorSet* temp_set);
   void begin_elem(const char *s);
   void end_elem();
   void begin_head(const char *s);
@@ -132,7 +133,8 @@ class IdealGraphPrinter : public CHeapObj<mtCompiler> {
   void begin_method();
   void end_method();
   void print_method(const char *name, int level = 0);
-  void print(const char *name, Node *root);
+  void print_method(PhaseGVN* phase, const char *name, int level = 0);
+  void print(PhaseGVN* phase, const char *name, Node *root);
   void set_compile(Compile* compile) {C = compile; }
   void update_compiled_method(ciMethod* current_method);
 };

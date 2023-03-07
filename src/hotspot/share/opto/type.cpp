@@ -479,8 +479,8 @@ void Type::Initialize_shared(Compile* current) {
   TypeInt::SHORT   = TypeInt::make(-32768,32767, WidenMin); // Java shorts
   TypeInt::POS     = TypeInt::make(0,max_jint,   WidenMin); // Non-neg values
   TypeInt::POS1    = TypeInt::make(1,max_jint,   WidenMin); // Positive values
-  TypeInt::INT     = TypeInt::make(min_jint,max_jint, WidenMax); // 32-bit integers
-  TypeInt::SYMINT  = TypeInt::make(-max_jint,max_jint,WidenMin); // symmetric range
+  TypeInt::INT     = TypeInt::make(min_jint,max_jint, WidenMax, UNKNOWN_INT_BITS); // 32-bit integers
+  TypeInt::SYMINT  = TypeInt::make(-max_jint,max_jint,WidenMin, UNKNOWN_INT_BITS); // symmetric range
   TypeInt::TYPE_DOMAIN  = TypeInt::INT;
   // CmpL is overloaded both as the bytecode computation returning
   // a trinary (-1,0,+1) integer result AND as an efficient long
@@ -953,6 +953,11 @@ void Type::check_symmetrical(const Type* t, const Type* mt, const VerifyMeet& ve
 
   if (t2t != t->_dual || t2this != this->_dual) {
     tty->print_cr("=== Meet Not Symmetric ===");
+    if (t2t != t->_dual) {
+      tty->print_cr("(Case 1)");
+    } else {
+      tty->print_cr("(Case 2)");
+    }
     tty->print("t   =                   ");              t->dump(); tty->cr();
     tty->print("this=                   ");                 dump(); tty->cr();
     tty->print("mt=(t meet this)=       ");             mt->dump(); tty->cr();
@@ -1580,12 +1585,22 @@ const TypeInt *TypeInt::SYMINT; // symmetric range [-max_jint..max_jint]
 const TypeInt *TypeInt::TYPE_DOMAIN; // alias for TypeInt::INT
 
 //------------------------------TypeInt----------------------------------------
-TypeInt::TypeInt( jint lo, jint hi, int w ) : TypeInteger(Int, w), _lo(lo), _hi(hi) {
+TypeInt::TypeInt(jint lo, jint hi, int w, julong livebits) : TypeInteger(Int, w), _lo(lo), _hi(hi), _livebits(livebits) {
+}
+
+static julong calcBits(jint lo) {
+  julong bits = 0;
+  for (int i = 0; i < 32; i++) {
+    julong bit = ((julong)((lo >> i) & 1L) << (((julong)i) * 2L));
+    bits |= bit;
+  }
+
+  return bits;
 }
 
 //------------------------------make-------------------------------------------
-const TypeInt *TypeInt::make( jint lo ) {
-  return (TypeInt*)(new TypeInt(lo,lo,WidenMin))->hashcons();
+const TypeInt* TypeInt::make(jint lo) {
+  return (TypeInt*)(new TypeInt(lo, lo, WidenMin, calcBits(lo)))->hashcons();
 }
 
 static int normalize_int_widen( jint lo, jint hi, int w ) {
@@ -1601,9 +1616,57 @@ static int normalize_int_widen( jint lo, jint hi, int w ) {
   return w;
 }
 
-const TypeInt *TypeInt::make( jint lo, jint hi, int w ) {
+static julong calcLiveBits(jint lo, jint hi) {
+  if (lo > hi) {
+    // Low > High? We must be in a dual.
+    // To ensure validity, let's calculate the same, but reverse hi and lo.
+
+    int tmp = lo;
+    lo = hi;
+    hi = tmp;
+  }
+
+  // Positive range: simply find the max bit use, mark used unknown, and mark unused zero
+  if (lo >= 0 && hi > lo) {
+//    tty->print("%d _ %d | ", lo, hi);
+    int sm = smallest_encompassing_power_of_two(hi);
+    int ind = log2i_graceful(sm);
+
+    // If the value is necessarily the smallest power of two (i.e. it is a power of two)
+    // then we should increase the bits it takes to encode this. For example
+    // 256 needs 9 bits but 255 only needs 8.
+    if (hi == sm) {
+      ind++;
+    }
+
+    julong bits = 0;
+    for (int i = 0; i < ind; i++) {
+      julong bit = ((julong)2L) << (((julong)i) * 2L);
+      bits |= bit;
+    }
+
+//    tty->print_cr("%d(%d)  %llu", sm, ind, bits);
+
+    return bits;
+  }
+
+  if (lo == hi) {
+    return calcBits(lo);
+  }
+
+  // Fall back to no known range
+
+  return UNKNOWN_INT_BITS;
+}
+
+const TypeInt *TypeInt::make(jint lo, jint hi, int w) {
   w = normalize_int_widen(lo, hi, w);
-  return (TypeInt*)(new TypeInt(lo,hi,w))->hashcons();
+  return (TypeInt*)(new TypeInt(lo, hi, w, calcLiveBits(lo, hi)))->hashcons();
+}
+
+const TypeInt *TypeInt::make(jint lo, jint hi, int w, julong livebits) {
+  w = normalize_int_widen(lo, hi, w);
+  return (TypeInt*)(new TypeInt(lo, hi, w, livebits))->hashcons();
 }
 
 //------------------------------meet-------------------------------------------
@@ -1650,10 +1713,10 @@ const Type *TypeInt::xmeet( const Type *t ) const {
 }
 
 //------------------------------xdual------------------------------------------
-// Dual: reverse hi & lo; flip widen
+// Dual: reverse hi & lo; flip widen; reverse bits
 const Type *TypeInt::xdual() const {
   int w = normalize_int_widen(_hi,_lo, WidenMax-_widen);
-  return new TypeInt(_hi,_lo,w);
+  return new TypeInt(_hi, _lo, w, _livebits);
 }
 
 //------------------------------widen------------------------------------------
@@ -1759,13 +1822,13 @@ const Type *TypeInt::filter_helper(const Type *kills, bool include_speculative) 
 // Structural equality check for Type representations
 bool TypeInt::eq( const Type *t ) const {
   const TypeInt *r = t->is_int(); // Handy access
-  return r->_lo == _lo && r->_hi == _hi && r->_widen == _widen;
+  return r->_lo == _lo && r->_hi == _hi && r->_widen == _widen && _livebits == r->_livebits;
 }
 
 //------------------------------hash-------------------------------------------
 // Type-specific hashing function.
 int TypeInt::hash(void) const {
-  return java_add(java_add(_lo, _hi), java_add((jint)_widen, (jint)Type::Int));
+  return java_add(java_add(_lo, _hi), java_add((jint)_widen, (jint)Type::Int)) + (int)_livebits;
 }
 
 //------------------------------is_finite--------------------------------------
@@ -1814,6 +1877,20 @@ void TypeInt::dump2( Dict &d, uint depth, outputStream *st ) const {
 
   if (_widen != 0 && this != TypeInt::INT)
     st->print(":%.*s", _widen, "wwww");
+
+  st->print("  |  ");
+  for (int i = 31; i >= 0; i--) {
+    julong bit = (_livebits >> (i * 2)) & 0x3;
+    if (bit == 0) {
+      st->print("0");
+    } else if (bit == 1) {
+      st->print("1");
+    } else if (bit == 2) {
+      st->print("~");
+    } else {
+      assert(false, "Got 4? how?");
+    }
+  }
 }
 #endif
 
