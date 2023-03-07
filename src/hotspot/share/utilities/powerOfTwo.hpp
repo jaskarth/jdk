@@ -84,6 +84,21 @@ inline int exact_log2(intptr_t value) {
   return log2i_exact((uintptr_t)value);
 }
 
+// http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+inline int smallest_encompassing_power_of_two(int v) {
+  if (v < 0) {
+    return 0;
+  }
+
+  v--;
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  return v + 1;
+}
+
 // Preconditions: value != 0, and the unsigned representation of value is a power of two
 inline int exact_log2_long(jlong value) {
   return log2i_exact((julong)value);
