@@ -479,8 +479,8 @@ void Type::Initialize_shared(Compile* current) {
   TypeInt::SHORT   = TypeInt::make(-32768,32767, WidenMin); // Java shorts
   TypeInt::POS     = TypeInt::make(0,max_jint,   WidenMin); // Non-neg values
   TypeInt::POS1    = TypeInt::make(1,max_jint,   WidenMin); // Positive values
-  TypeInt::INT     = TypeInt::make(min_jint,max_jint, WidenMax, UNKNOWN_INT_BITS); // 32-bit integers
-  TypeInt::SYMINT  = TypeInt::make(-max_jint,max_jint,WidenMin, UNKNOWN_INT_BITS); // symmetric range
+  TypeInt::INT     = TypeInt::make(min_jint,max_jint, WidenMax); // 32-bit integers
+  TypeInt::SYMINT  = TypeInt::make(-max_jint,max_jint,WidenMin); // symmetric range
   TypeInt::TYPE_DOMAIN  = TypeInt::INT;
   // CmpL is overloaded both as the bytecode computation returning
   // a trinary (-1,0,+1) integer result AND as an efficient long
@@ -756,6 +756,11 @@ const Type *Type::hashcons(void) {
   ((Type*)_dual)->_dual = this; // Finish up being symmetric
 #ifdef ASSERT
   Type *dual_dual = (Type*)_dual->xdual();
+  if (!eq(dual_dual)) {
+    dump(); tty->cr();
+    _dual->dump(); tty->cr();
+    dual_dual->dump(); tty->cr();
+  }
   assert( eq(dual_dual), "xdual(xdual()) should be identity" );
   delete dual_dual;
 #endif
@@ -954,9 +959,9 @@ void Type::check_symmetrical(const Type* t, const Type* mt, const VerifyMeet& ve
   if (t2t != t->_dual || t2this != this->_dual) {
     tty->print_cr("=== Meet Not Symmetric ===");
     if (t2t != t->_dual) {
-      tty->print_cr("(Case 1)");
+      tty->print_cr("(Case 1), mt_dual meet t_dual != t_dual");
     } else {
-      tty->print_cr("(Case 2)");
+      tty->print_cr("(Case 2), mt_dual meet this_dual != this_dual");
     }
     tty->print("t   =                   ");              t->dump(); tty->cr();
     tty->print("this=                   ");                 dump(); tty->cr();
@@ -1617,8 +1622,14 @@ static int normalize_int_widen( jint lo, jint hi, int w ) {
 }
 
 static julong calcLiveBits(jint lo, jint hi) {
+  // reverse int? We don't know anything about this.
+  if (lo == max_jint && hi == min_jint) {
+    return UNKNOWN_INT_BITS;
+  }
+
   if (lo > hi) {
     // Low > High? We must be in a dual.
+
     // To ensure validity, let's calculate the same, but reverse hi and lo.
 
     int tmp = lo;
@@ -1661,12 +1672,26 @@ static julong calcLiveBits(jint lo, jint hi) {
 
 const TypeInt *TypeInt::make(jint lo, jint hi, int w) {
   w = normalize_int_widen(lo, hi, w);
-  return (TypeInt*)(new TypeInt(lo, hi, w, calcLiveBits(lo, hi)))->hashcons();
+  julong bits = calcLiveBits(lo, hi);
+//  tty->print_cr("1) %d %d | %llu", lo, hi, bits);
+  return (TypeInt*)(new TypeInt(lo, hi, w, bits))->hashcons();
 }
 
 const TypeInt *TypeInt::make(jint lo, jint hi, int w, julong livebits) {
   w = normalize_int_widen(lo, hi, w);
+//  tty->print_cr("2) %d %d | %llu", lo, hi, livebits);
   return (TypeInt*)(new TypeInt(lo, hi, w, livebits))->hashcons();
+}
+
+bool TypeInt::is_bit_const() const {
+  for (int i = 0; i < 32; i++) {
+    julong bit = (_livebits >> (julong)(i * 2L)) & 0x3;
+    if (bit == 2) {
+      // Found bottom
+      return false;
+    }
+  }
+  return true;
 }
 
 //------------------------------meet-------------------------------------------
@@ -1709,14 +1734,85 @@ const Type *TypeInt::xmeet( const Type *t ) const {
 
   // Expand covered set
   const TypeInt *r = t->is_int();
-  return make( MIN2(_lo,r->_lo), MAX2(_hi,r->_hi), MAX2(_widen,r->_widen) );
+  julong bits = 0;
+  for (int i = 0; i < 32; i++) {
+    julong a = (   _livebits >> (julong)(i * 2L)) & 0x3;
+    julong b = (r->_livebits >> (julong)(i * 2L)) & 0x3;
+
+    // Ok, let's think about the lowering rules here.
+    // The bit lattice must be strictly falling-
+    // so:
+    // `T meet ~` -> ~
+    // `T meet 0/1` -> 0/1
+    // `0 meet 1` -> ~
+    julong res = 4;
+    if (a == b) {
+      // Same type: Same meet.
+      res = a;
+    } else if (a == 2 || b == 2) {
+      // One is bottom? Other must be bottom.
+      res = 2;
+    } else if ((a == 1 && b == 3) || (a == 3 && b == 1)) {
+      // One is Top, Other is one? Must be one.
+      res = 1;
+    } else if ((a == 0 && b == 3) || (a == 3 && b == 0)) {
+      // One is Top, Other is zero? Must be zero.
+      res = 0;
+    } else if ((a == 0 && b == 1) || (a == 1 && b == 0)) {
+      // This is tricky. One is one, other is zero? As it wants to be both, we can't inuit what it is. This is bottom.
+      res = 2;
+    }
+
+    if (res == 4) {
+      assert(false, "Live bits rule didn't work: %d %d", a, b);
+    }
+
+    julong bit = res << (julong)(i * 2L);
+    bits |= bit;
+  }
+  jint nlo = MIN2(_lo,r->_lo);
+  jint nhi = MAX2(_hi,r->_hi);
+//  if (nlo == nhi) {
+//    bits = calcBits(nlo);
+//  }
+
+//  tty->print_cr("m) %d (%d | %d) %d (%d | %d) -> %llu (%llu | %llu)", nlo, _lo,r->_lo, nhi, _hi,r->_hi, bits, _livebits, r->_livebits);
+
+  return make(nlo, nhi, MAX2(_widen,r->_widen), bits);
+}
+
+static julong bitDual(julong v) {
+  if (v == 0) {
+    return 0; // same rank: 0 -> 0
+  } else if (v == 1) {
+    return 1; // same rank: 1 -> 1
+  } else if (v == 2) {
+    return 3; // flip: Bottom -> Top
+  } else if (v == 3) {
+    return 2; // flip: Top -> Bottom
+  } else {
+    assert(false, "How did we get %d ?", v);
+    return -1;
+  }
 }
 
 //------------------------------xdual------------------------------------------
-// Dual: reverse hi & lo; flip widen; reverse bits
+// Dual: reverse hi & lo; flip widen; flip bit lattice
 const Type *TypeInt::xdual() const {
   int w = normalize_int_widen(_hi,_lo, WidenMax-_widen);
-  return new TypeInt(_hi, _lo, w, _livebits);
+
+  julong bits = 0;
+  for (int i = 0; i < 32; i++) {
+    julong a = (_livebits >> (julong)(i * 2L)) & 0x3;
+    julong b = bitDual(a);
+    julong bit = b << (julong)(i*2L);
+    bits |= bit;
+  }
+
+
+//  tty->print_cr("%llu dual-> %llu", _livebits, bits);
+
+  return new TypeInt(_hi, _lo, w, bits);
 }
 
 //------------------------------widen------------------------------------------
@@ -1813,7 +1909,7 @@ const Type *TypeInt::filter_helper(const Type *kills, bool include_speculative) 
   if (ft->_widen < this->_widen) {
     // Do not allow the value of kill->_widen to affect the outcome.
     // The widen bits must be allowed to run freely through the graph.
-    ft = TypeInt::make(ft->_lo, ft->_hi, this->_widen);
+    ft = TypeInt::make(ft->_lo, ft->_hi, this->_widen, ft->_livebits);
   }
   return ft;
 }
@@ -1835,6 +1931,11 @@ int TypeInt::hash(void) const {
 // Has a finite value
 bool TypeInt::is_finite() const {
   return true;
+}
+
+const Type* TypeInt::remove_speculative() const {
+//  return make(_lo, _hi, _widen, calcLiveBits(_lo, _hi));
+  return this;
 }
 
 //------------------------------dump2------------------------------------------
@@ -1888,7 +1989,7 @@ void TypeInt::dump2( Dict &d, uint depth, outputStream *st ) const {
     } else if (bit == 2) {
       st->print("~");
     } else {
-      assert(false, "Got 4? how?");
+      st->print("T");
     }
   }
 }
@@ -2404,7 +2505,7 @@ inline const TypeInt* normalize_array_size(const TypeInt* size) {
   // of their index types.  Pick minimum wideness, since that is the
   // forced wideness of small ranges anyway.
   if (size->_widen != Type::WidenMin)
-    return TypeInt::make(size->_lo, size->_hi, Type::WidenMin);
+    return TypeInt::make(size->_lo, size->_hi, Type::WidenMin, size->_livebits);
   else
     return size;
 }

@@ -571,7 +571,8 @@ public:
 enum BitType {
   ZERO,
   ONE,
-  UNKNOWN
+  BOTTOM,
+  TOP
 };
 
 static const julong UNKNOWN_INT_BITS = 0xAAAAAAAAAAAAAAAA;
@@ -581,14 +582,6 @@ static const julong UNKNOWN_INT_BITS = 0xAAAAAAAAAAAAAAAA;
 // upper bound, inclusive.
 class TypeInt : public TypeInteger {
   TypeInt(jint lo, jint hi, int w, julong livebits);
-private:
-  // Tracks the bit liveness of an int, using 2 bits to track each data bit.
-  // 0 - Is always 0.
-  // 1 - Is always 1.
-  // 2 - Is opaque to the compiler.
-  // Indexing starts where bits 01 map to bit 0 on the int.
-  //
-  julong _livebits;
 protected:
   virtual const Type *filter_helper(const Type *kills, bool include_speculative) const;
 
@@ -600,10 +593,20 @@ public:
   virtual bool empty(void) const;        // TRUE if type is vacuous
   const jint _lo, _hi;          // Lower bound, upper bound
 
+  // Tracks the bit liveness of an int, using 2 bits to track each data bit.
+  // 0 - Is always 0.
+  // 1 - Is always 1.
+  // 2 - Is opaque to the compiler.
+  // Indexing starts where bits 01 map to bit 0 on the int.
+  //
+  const julong _livebits;
+
   static const TypeInt *make(jint lo);
   // must always specify w
   static const TypeInt *make(jint lo, jint hi, int w);
   static const TypeInt *make(jint lo, jint hi, int w, julong livebits);
+  // Returns true if the live bits of this type have a totally constant value (that is to say, no bottom bits)
+  bool is_bit_const() const;
 
   // Check for single integer
   bool is_con() const { return _lo==_hi; }
@@ -616,6 +619,7 @@ public:
   virtual const Type *xdual() const;    // Compute dual right now.
   virtual const Type *widen( const Type *t, const Type* limit_type ) const;
   virtual const Type *narrow( const Type *t ) const;
+  virtual const Type* remove_speculative() const;
 
   virtual jlong hi_as_long() const { return _hi; }
   virtual jlong lo_as_long() const { return _lo; }

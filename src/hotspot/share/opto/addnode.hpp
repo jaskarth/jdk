@@ -190,6 +190,7 @@ public:
   virtual const Type *bottom_type() const { return TypeInt::INT; }
   int max_opcode() const { return Op_MaxI; }
   int min_opcode() const { return Op_MinI; }
+  virtual const Type* Value(PhaseGVN* phase) const;
   virtual Node* Identity(PhaseGVN* phase);
   virtual uint ideal_reg() const { return Op_RegI; }
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);

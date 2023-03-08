@@ -718,6 +718,76 @@ uint AddPNode::match_edge(uint idx) const {
 }
 
 //=============================================================================
+
+const Type* OrINode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+  const Type* t2 = phase->type(in(2));
+
+  const Type* mv = AddNode::Value(phase);
+
+  if (t1->isa_int() && t2->isa_int()) {
+    const TypeInt* t1i = t1->is_int();
+    const TypeInt* t2i = t2->is_int();
+    julong livebits = 0;
+    for (int i = 0; i < 32; i++) {
+      julong a = ((t1i->_livebits) >> (julong)(i * 2L)) & 0x3;
+      julong b = ((t2i->_livebits) >> (julong)(i * 2L)) & 0x3;
+
+      julong res = 4;
+      // a | b
+      if (b == 2) {
+        // bitwise with bottom
+        if (a == 1) {
+          res = 1;
+        } else {
+          // we don't know anything
+          res = 2;
+        }
+      } else if (b == 0) {
+        if (a == 2) {
+          res = 2; // B | 0 => B
+        } else if (a == 1) {
+          res = 1; // 1 | 0 => 1
+        } else if (a == 0) {
+          res = 0; // 0 | 0 => 0
+        }
+      } else if (b == 1) {
+        res = 1; // x | 1 => 1
+      }
+
+      if (res == 4) {
+        assert(false, "Illegal value: %d %d", a, b);
+      }
+
+      julong bit = res << (julong)(i * 2L);
+      livebits |= bit;
+    }
+
+    const TypeInt* mvi = mv->is_int();
+    if (livebits != mvi->_livebits) {
+//      phase->C->method()->print_name(); tty->cr();
+//      tty->print_cr("OrI: Made a stronger livebits (%llu & %llu) %llu, %llu", t1i->_livebits, t2i->_livebits, livebits, mvi->_livebits);
+
+      const TypeInt* nt = TypeInt::make(mvi->_lo, mvi->_hi, mvi->_widen, livebits);
+
+//      tty->print("In1: "); t1->dump(); tty->cr();
+//      tty->print("In2: "); t2->dump(); tty->cr();
+//      tty->print("Old: "); mv->dump(); tty->cr();
+//      tty->print("New: "); nt->dump(); tty->cr();
+
+      if (nt->is_bit_const()) {
+        phase->C->method()->print_name();
+        tty->print_cr("\nDead ori");
+        nt->dump(); tty->cr();
+      }
+
+      return nt;
+    }
+  }
+
+  return mv;
+}
+
 //------------------------------Identity---------------------------------------
 Node* OrINode::Identity(PhaseGVN* phase) {
   // x | x => x
@@ -749,7 +819,44 @@ Node* rotate_shift(PhaseGVN* phase, Node* lshift, Node* rshift, int mask) {
   return NULL;
 }
 
+static bool bit_ranges_differ(const Type* a, const Type* b) {
+  if (a->isa_int() && b->isa_int()) {
+    const TypeInt *t1i = a->is_int();
+    const TypeInt *t2i = a->is_int();
+
+    for (int i = 0; i < 32; i++) {
+      julong a = ((t1i->_livebits) >> (julong)(i * 2L)) & 0x3;
+      julong b = ((t2i->_livebits) >> (julong)(i * 2L)) & 0x3;
+
+      // a | b
+      if (b == 2) {
+        if (a != 0) {
+          return false;
+        }
+      } else if (b == 0) {
+        continue;
+      } else if (b == 1) {
+        if (a != 0) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 Node* OrINode::Ideal(PhaseGVN* phase, bool can_reshape) {
+  if (bit_ranges_differ(phase->type(in(1)), phase->type(in(2)))) {
+    phase->C->method()->print_name(); tty->cr();
+    tty->print("In1: "); phase->type(in(1))->dump(); tty->cr();
+    tty->print("In2: "); phase->type(in(2))->dump(); tty->cr();
+    tty->print_cr("\nOri inputs idempotent");
+    return new AddINode(in(1), in(2));
+  }
+
   int lopcode = in(1)->Opcode();
   int ropcode = in(2)->Opcode();
   if (Matcher::match_rule_supported(Op_RotateLeft) &&
