@@ -4364,15 +4364,17 @@ attributes %{
 //----------RESOURCES----------------------------------------------------------
 // Resources are the functional units available to the machine
 
-// Generic P2/P3 pipeline
-// 3 decoders, only D0 handles big operands; a "bundle" is the limit of
-// 3 instructions decoded per cycle.
-// 2 load/store ops per cycle, 1 branch, 1 FPU,
-// 3 ALU op, only ALU0 handles mul instructions.
-resources( D0, D1, D2, DECODE = D0 | D1 | D2,
+// Generic Skylake-esque architecture model
+// 4 decoders, only D0 handles big operands; a "bundle" is the limit of
+// 4 instructions decoded per cycle.
+// 2 load/store ops per cycle, 2 branch,
+// 2 FPU (div only on FP0),
+// 4 ALU op, only ALU0 handles mul instructions.
+resources( D0, D1, D2, D3, DECODE = D0 | D1 | D2 | D3,
            MS0, MS1, MS2, MEM = MS0 | MS1 | MS2,
-           BR, FPU,
-           ALU0, ALU1, ALU2, ALU = ALU0 | ALU1 | ALU2);
+           BR1, BR2, BR = BR1 | BR2,
+           FP0, FP1, FPU = FP0 | FP1,
+           ALU0, ALU1, ALU2, ALU3, ALU = ALU0 | ALU1 | ALU2 | ALU3);
 
 //----------PIPELINE DESCRIPTION-----------------------------------------------
 // Pipeline Description specifies the stages in the machine's pipeline
@@ -4437,7 +4439,7 @@ pipe_class ialu_reg_reg_fat(rRegI dst, memory src)
     single_instruction;
     dst    : S4(write);
     src    : S3(read);
-    D0     : S0;        // big decoder only
+    DECODE : S0;        // any decoder
     ALU    : S3;        // any alu
 %}
 
@@ -4447,7 +4449,7 @@ pipe_class ialu_reg_mem(rRegI dst, memory mem)
     single_instruction;
     dst    : S5(write);
     mem    : S3(read);
-    D0     : S0;        // big decoder only
+    DECODE : S0;
     ALU    : S4;        // any alu
     MEM    : S3;        // any mem
 %}
@@ -4457,7 +4459,7 @@ pipe_class ialu_mem(memory mem)
 %{
     single_instruction;
     mem    : S3(read);
-    D0     : S0;        // big decoder only
+    DECODE : S0;
     MEM    : S3;        // any mem
 %}
 
@@ -4467,7 +4469,7 @@ pipe_class ialu_mem_reg(memory mem, rRegI src)
     single_instruction;
     mem    : S3(read);
     src    : S5(read);
-    D0     : S0;        // big decoder only
+    DECODE : S0;
     ALU    : S4;        // any alu
     MEM    : S3;
 %}
@@ -4488,7 +4490,7 @@ pipe_class ialu_mem_imm(memory mem)
 %{
     single_instruction;
     mem    : S3(read);
-    D0     : S0;        // big decoder only
+    DECODE : S0;
     ALU    : S4;        // any alu
     MEM    : S3;
 %}
@@ -4499,7 +4501,7 @@ pipe_class ialu_reg_reg_alu0(rRegI dst, rRegI src)
     single_instruction;
     dst    : S4(write);
     src    : S3(read);
-    D0     : S0;        // Big decoder only
+    DECODE : S0;
     ALU0   : S3;        // only alu0
 %}
 
@@ -4509,7 +4511,7 @@ pipe_class ialu_reg_mem_alu0(rRegI dst, memory mem)
     single_instruction;
     dst    : S5(write);
     mem    : S3(read);
-    D0     : S0;        // big decoder only
+    DECODE : S0;
     ALU0   : S4;        // ALU0 only
     MEM    : S3;        // any mem
 %}
@@ -4542,7 +4544,7 @@ pipe_class ialu_cr_reg_mem(rFlagsReg cr, rRegI src1, memory src2)
     cr     : S4(write);
     src1   : S3(read);
     src2   : S3(read);
-    D0     : S0;        // big decoder only
+    DECODE : S0;
     ALU    : S4;        // any alu
     MEM    : S3;
 %}
@@ -4602,31 +4604,31 @@ pipe_class pipe_cmov_reg_long( rFlagsReg cr, rRegL dst, rRegL src)
 // Float reg-reg operation
 pipe_class fpu_reg(regD dst)
 %{
-    instruction_count(2);
+    instruction_count(1);
     dst    : S3(read);
-    DECODE : S0(2);     // any 2 decoders
+    DECODE : S0;     // any decoder
     FPU    : S3;
 %}
 
 // Float reg-reg operation
 pipe_class fpu_reg_reg(regD dst, regD src)
 %{
-    instruction_count(2);
+    instruction_count(1);
     dst    : S4(write);
     src    : S3(read);
-    DECODE : S0(2);     // any 2 decoders
+    DECODE : S0;     // any decoder
     FPU    : S3;
 %}
 
 // Float reg-reg operation
 pipe_class fpu_reg_reg_reg(regD dst, regD src1, regD src2)
 %{
-    instruction_count(3);
+    instruction_count(1);
     dst    : S4(write);
     src1   : S3(read);
     src2   : S3(read);
-    DECODE : S0(3);     // any 3 decoders
-    FPU    : S3(2);
+    DECODE : S0;     // any 3 decoders
+    FPU    : S3;
 %}
 
 // Float reg-reg operation
@@ -4658,11 +4660,10 @@ pipe_class fpu_reg_mem_reg_reg(regD dst, memory src1, regD src2, regD src3)
 // Float reg-mem operation
 pipe_class fpu_reg_mem(regD dst, memory mem)
 %{
-    instruction_count(2);
+    instruction_count(1);
     dst    : S5(write);
     mem    : S3(read);
-    D0     : S0;        // big decoder only
-    DECODE : S1;        // any decoder for FPU POP
+    DECODE : S0;        // any decoder
     FPU    : S4;
     MEM    : S3;        // any mem
 %}
@@ -4670,12 +4671,11 @@ pipe_class fpu_reg_mem(regD dst, memory mem)
 // Float reg-mem operation
 pipe_class fpu_reg_reg_mem(regD dst, regD src1, memory mem)
 %{
-    instruction_count(3);
+    instruction_count(1);
     dst    : S5(write);
     src1   : S3(read);
     mem    : S3(read);
-    D0     : S0;        // big decoder only
-    DECODE : S1(2);     // any decoder for FPU POP
+    DECODE : S1;     // any decoder for FPU POP
     FPU    : S4;
     MEM    : S3;        // any mem
 %}
@@ -4683,23 +4683,10 @@ pipe_class fpu_reg_reg_mem(regD dst, regD src1, memory mem)
 // Float mem-reg operation
 pipe_class fpu_mem_reg(memory mem, regD src)
 %{
-    instruction_count(2);
+    instruction_count(1);
     src    : S5(read);
-    mem    : S3(read);
-    DECODE : S0;        // any decoder for FPU PUSH
-    D0     : S1;        // big decoder only
-    FPU    : S4;
-    MEM    : S3;        // any mem
-%}
-
-pipe_class fpu_mem_reg_reg(memory mem, regD src1, regD src2)
-%{
-    instruction_count(3);
-    src1   : S3(read);
-    src2   : S3(read);
-    mem    : S3(read);
-    DECODE : S0(2);     // any decoder for FPU PUSH
-    D0     : S1;        // big decoder only
+    mem    : S3(write);
+    DECODE : S0;        // any decoder
     FPU    : S4;
     MEM    : S3;        // any mem
 %}
@@ -4714,60 +4701,6 @@ pipe_class fpu_mem_reg_mem(memory mem, regD src1, memory src2)
     D0     : S0(2);     // big decoder only
     FPU    : S4;
     MEM    : S3(2);     // any mem
-%}
-
-pipe_class fpu_mem_mem(memory dst, memory src1)
-%{
-    instruction_count(2);
-    src1   : S3(read);
-    dst    : S4(read);
-    D0     : S0(2);     // big decoder only
-    MEM    : S3(2);     // any mem
-%}
-
-pipe_class fpu_mem_mem_mem(memory dst, memory src1, memory src2)
-%{
-    instruction_count(3);
-    src1   : S3(read);
-    src2   : S3(read);
-    dst    : S4(read);
-    D0     : S0(3);     // big decoder only
-    FPU    : S4;
-    MEM    : S3(3);     // any mem
-%}
-
-pipe_class fpu_mem_reg_con(memory mem, regD src1)
-%{
-    instruction_count(3);
-    src1   : S4(read);
-    mem    : S4(read);
-    DECODE : S0;        // any decoder for FPU PUSH
-    D0     : S0(2);     // big decoder only
-    FPU    : S4;
-    MEM    : S3(2);     // any mem
-%}
-
-// Float load constant
-pipe_class fpu_reg_con(regD dst)
-%{
-    instruction_count(2);
-    dst    : S5(write);
-    D0     : S0;        // big decoder only for the load
-    DECODE : S1;        // any decoder for FPU POP
-    FPU    : S4;
-    MEM    : S3;        // any mem
-%}
-
-// Float load constant
-pipe_class fpu_reg_reg_con(regD dst, regD src)
-%{
-    instruction_count(3);
-    dst    : S5(write);
-    src    : S3(read);
-    D0     : S0;        // big decoder only for the load
-    DECODE : S1(2);     // any decoder for FPU POP
-    FPU    : S4;
-    MEM    : S3;        // any mem
 %}
 
 // UnConditional branch
@@ -5334,7 +5267,7 @@ instruct loadF(regF dst, memory mem)
   ins_encode %{
     __ movflt($dst$$XMMRegister, $mem$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 // Load Double
@@ -5348,7 +5281,7 @@ instruct loadD_partial(regD dst, memory mem)
   ins_encode %{
     __ movdbl($dst$$XMMRegister, $mem$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 instruct loadD(regD dst, memory mem)
@@ -5361,7 +5294,7 @@ instruct loadD(regD dst, memory mem)
   ins_encode %{
     __ movdbl($dst$$XMMRegister, $mem$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 
@@ -6326,7 +6259,7 @@ instruct storeF(memory mem, regF src)
   ins_encode %{
     __ movflt($mem$$Address, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_mem_reg); // XXX
 %}
 
 // Store immediate Float value (it is faster than store from XMM register)
@@ -6365,7 +6298,7 @@ instruct storeD(memory mem, regD src)
   ins_encode %{
     __ movdbl($mem$$Address, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_mem_reg); // XXX
 %}
 
 // Store immediate double 0.0 (it is faster than store from XMM register)
@@ -10780,7 +10713,7 @@ instruct cmpF_cc_reg_CF(rFlagsRegUCF cr, regF src1, regF src2) %{
   ins_encode %{
     __ ucomiss($src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct cmpF_cc_memCF(rFlagsRegUCF cr, regF src1, memory src2) %{
@@ -10791,7 +10724,7 @@ instruct cmpF_cc_memCF(rFlagsRegUCF cr, regF src1, memory src2) %{
   ins_encode %{
     __ ucomiss($src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct cmpF_cc_immCF(rFlagsRegUCF cr, regF src, immF con) %{
@@ -10801,7 +10734,7 @@ instruct cmpF_cc_immCF(rFlagsRegUCF cr, regF src, immF con) %{
   ins_encode %{
     __ ucomiss($src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 // Really expensive, avoid
@@ -10831,7 +10764,7 @@ instruct cmpD_cc_reg_CF(rFlagsRegUCF cr, regD src1, regD src2) %{
   ins_encode %{
     __ ucomisd($src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct cmpD_cc_memCF(rFlagsRegUCF cr, regD src1, memory src2) %{
@@ -10842,7 +10775,7 @@ instruct cmpD_cc_memCF(rFlagsRegUCF cr, regD src1, memory src2) %{
   ins_encode %{
     __ ucomisd($src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct cmpD_cc_immCF(rFlagsRegUCF cr, regD src, immD con) %{
@@ -10852,7 +10785,7 @@ instruct cmpD_cc_immCF(rFlagsRegUCF cr, regD src, immD con) %{
   ins_encode %{
     __ ucomisd($src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 // Compare into -1,0,1
@@ -10989,7 +10922,7 @@ instruct convF2D_reg_reg(regD dst, regF src)
   ins_encode %{
     __ cvtss2sd ($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convF2D_reg_mem(regD dst, memory src)
@@ -11000,7 +10933,7 @@ instruct convF2D_reg_mem(regD dst, memory src)
   ins_encode %{
     __ cvtss2sd ($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 instruct convD2F_reg_reg(regF dst, regD src)
@@ -11011,7 +10944,7 @@ instruct convD2F_reg_reg(regF dst, regD src)
   ins_encode %{
     __ cvtsd2ss ($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convD2F_reg_mem(regF dst, memory src)
@@ -11022,7 +10955,7 @@ instruct convD2F_reg_mem(regF dst, memory src)
   ins_encode %{
     __ cvtsd2ss ($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 // XXX do mem variants
@@ -11101,7 +11034,7 @@ instruct convI2F_reg_reg(regF dst, rRegI src)
   ins_encode %{
     __ cvtsi2ssl ($dst$$XMMRegister, $src$$Register);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convI2F_reg_mem(regF dst, memory src)
@@ -11112,7 +11045,7 @@ instruct convI2F_reg_mem(regF dst, memory src)
   ins_encode %{
     __ cvtsi2ssl ($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 instruct convI2D_reg_reg(regD dst, rRegI src)
@@ -11124,7 +11057,7 @@ instruct convI2D_reg_reg(regD dst, rRegI src)
   ins_encode %{
     __ cvtsi2sdl ($dst$$XMMRegister, $src$$Register);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convI2D_reg_mem(regD dst, memory src)
@@ -11135,7 +11068,7 @@ instruct convI2D_reg_mem(regD dst, memory src)
   ins_encode %{
     __ cvtsi2sdl ($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 instruct convXI2F_reg(regF dst, rRegI src)
@@ -11149,7 +11082,7 @@ instruct convXI2F_reg(regF dst, rRegI src)
     __ movdl($dst$$XMMRegister, $src$$Register);
     __ cvtdq2ps($dst$$XMMRegister, $dst$$XMMRegister);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convXI2D_reg(regD dst, rRegI src)
@@ -11163,7 +11096,7 @@ instruct convXI2D_reg(regD dst, rRegI src)
     __ movdl($dst$$XMMRegister, $src$$Register);
     __ cvtdq2pd($dst$$XMMRegister, $dst$$XMMRegister);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convL2F_reg_reg(regF dst, rRegL src)
@@ -11174,7 +11107,7 @@ instruct convL2F_reg_reg(regF dst, rRegL src)
   ins_encode %{
     __ cvtsi2ssq ($dst$$XMMRegister, $src$$Register);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convL2F_reg_mem(regF dst, memory src)
@@ -11185,7 +11118,7 @@ instruct convL2F_reg_mem(regF dst, memory src)
   ins_encode %{
     __ cvtsi2ssq ($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 instruct convL2D_reg_reg(regD dst, rRegL src)
@@ -11196,7 +11129,7 @@ instruct convL2D_reg_reg(regD dst, rRegL src)
   ins_encode %{
     __ cvtsi2sdq ($dst$$XMMRegister, $src$$Register);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_reg); // XXX
 %}
 
 instruct convL2D_reg_mem(regD dst, memory src)
@@ -11207,7 +11140,7 @@ instruct convL2D_reg_mem(regD dst, memory src)
   ins_encode %{
     __ cvtsi2sdq ($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow); // XXX
+  ins_pipe(fpu_reg_mem); // XXX
 %}
 
 instruct convI2L_reg_reg(rRegL dst, rRegI src)

@@ -2978,7 +2978,7 @@ instruct addF_reg(regF dst, regF src) %{
   ins_encode %{
     __ addss($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct addF_mem(regF dst, memory src) %{
@@ -2990,7 +2990,7 @@ instruct addF_mem(regF dst, memory src) %{
   ins_encode %{
     __ addss($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct addF_imm(regF dst, immF con) %{
@@ -3001,7 +3001,7 @@ instruct addF_imm(regF dst, immF con) %{
   ins_encode %{
     __ addss($dst$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct addF_reg_reg(regF dst, regF src1, regF src2) %{
@@ -3013,7 +3013,7 @@ instruct addF_reg_reg(regF dst, regF src1, regF src2) %{
   ins_encode %{
     __ vaddss($dst$$XMMRegister, $src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_reg);
 %}
 
 instruct addF_reg_mem(regF dst, regF src1, memory src2) %{
@@ -3025,7 +3025,7 @@ instruct addF_reg_mem(regF dst, regF src1, memory src2) %{
   ins_encode %{
     __ vaddss($dst$$XMMRegister, $src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_mem);
 %}
 
 instruct addF_reg_imm(regF dst, regF src, immF con) %{
@@ -3037,7 +3037,7 @@ instruct addF_reg_imm(regF dst, regF src, immF con) %{
   ins_encode %{
     __ vaddss($dst$$XMMRegister, $src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct addD_reg(regD dst, regD src) %{
@@ -3049,7 +3049,7 @@ instruct addD_reg(regD dst, regD src) %{
   ins_encode %{
     __ addsd($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct addD_mem(regD dst, memory src) %{
@@ -3061,7 +3061,7 @@ instruct addD_mem(regD dst, memory src) %{
   ins_encode %{
     __ addsd($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct addD_imm(regD dst, immD con) %{
@@ -3072,7 +3072,7 @@ instruct addD_imm(regD dst, immD con) %{
   ins_encode %{
     __ addsd($dst$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct addD_reg_reg(regD dst, regD src1, regD src2) %{
@@ -3084,7 +3084,7 @@ instruct addD_reg_reg(regD dst, regD src1, regD src2) %{
   ins_encode %{
     __ vaddsd($dst$$XMMRegister, $src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_reg);
 %}
 
 instruct addD_reg_mem(regD dst, regD src1, memory src2) %{
@@ -3096,7 +3096,7 @@ instruct addD_reg_mem(regD dst, regD src1, memory src2) %{
   ins_encode %{
     __ vaddsd($dst$$XMMRegister, $src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_mem);
 %}
 
 instruct addD_reg_imm(regD dst, regD src, immD con) %{
@@ -3108,7 +3108,7 @@ instruct addD_reg_imm(regD dst, regD src, immD con) %{
   ins_encode %{
     __ vaddsd($dst$$XMMRegister, $src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct subF_reg(regF dst, regF src) %{
@@ -3120,7 +3120,7 @@ instruct subF_reg(regF dst, regF src) %{
   ins_encode %{
     __ subss($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct subF_mem(regF dst, memory src) %{
@@ -3132,7 +3132,7 @@ instruct subF_mem(regF dst, memory src) %{
   ins_encode %{
     __ subss($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct subF_imm(regF dst, immF con) %{
@@ -3143,7 +3143,7 @@ instruct subF_imm(regF dst, immF con) %{
   ins_encode %{
     __ subss($dst$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct subF_reg_reg(regF dst, regF src1, regF src2) %{
@@ -3155,7 +3155,7 @@ instruct subF_reg_reg(regF dst, regF src1, regF src2) %{
   ins_encode %{
     __ vsubss($dst$$XMMRegister, $src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_reg);
 %}
 
 instruct subF_reg_mem(regF dst, regF src1, memory src2) %{
@@ -3167,7 +3167,7 @@ instruct subF_reg_mem(regF dst, regF src1, memory src2) %{
   ins_encode %{
     __ vsubss($dst$$XMMRegister, $src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_mem);
 %}
 
 instruct subF_reg_imm(regF dst, regF src, immF con) %{
@@ -3179,7 +3179,7 @@ instruct subF_reg_imm(regF dst, regF src, immF con) %{
   ins_encode %{
     __ vsubss($dst$$XMMRegister, $src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct subD_reg(regD dst, regD src) %{
@@ -3191,7 +3191,7 @@ instruct subD_reg(regD dst, regD src) %{
   ins_encode %{
     __ subsd($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct subD_mem(regD dst, memory src) %{
@@ -3203,7 +3203,7 @@ instruct subD_mem(regD dst, memory src) %{
   ins_encode %{
     __ subsd($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct subD_imm(regD dst, immD con) %{
@@ -3214,7 +3214,7 @@ instruct subD_imm(regD dst, immD con) %{
   ins_encode %{
     __ subsd($dst$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct subD_reg_reg(regD dst, regD src1, regD src2) %{
@@ -3226,7 +3226,7 @@ instruct subD_reg_reg(regD dst, regD src1, regD src2) %{
   ins_encode %{
     __ vsubsd($dst$$XMMRegister, $src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_reg);
 %}
 
 instruct subD_reg_mem(regD dst, regD src1, memory src2) %{
@@ -3238,7 +3238,7 @@ instruct subD_reg_mem(regD dst, regD src1, memory src2) %{
   ins_encode %{
     __ vsubsd($dst$$XMMRegister, $src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_mem);
 %}
 
 instruct subD_reg_imm(regD dst, regD src, immD con) %{
@@ -3250,7 +3250,7 @@ instruct subD_reg_imm(regD dst, regD src, immD con) %{
   ins_encode %{
     __ vsubsd($dst$$XMMRegister, $src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct mulF_reg(regF dst, regF src) %{
@@ -3262,7 +3262,7 @@ instruct mulF_reg(regF dst, regF src) %{
   ins_encode %{
     __ mulss($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct mulF_mem(regF dst, memory src) %{
@@ -3274,7 +3274,7 @@ instruct mulF_mem(regF dst, memory src) %{
   ins_encode %{
     __ mulss($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct mulF_imm(regF dst, immF con) %{
@@ -3285,7 +3285,7 @@ instruct mulF_imm(regF dst, immF con) %{
   ins_encode %{
     __ mulss($dst$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct mulF_reg_reg(regF dst, regF src1, regF src2) %{
@@ -3297,7 +3297,7 @@ instruct mulF_reg_reg(regF dst, regF src1, regF src2) %{
   ins_encode %{
     __ vmulss($dst$$XMMRegister, $src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_reg);
 %}
 
 instruct mulF_reg_mem(regF dst, regF src1, memory src2) %{
@@ -3309,7 +3309,7 @@ instruct mulF_reg_mem(regF dst, regF src1, memory src2) %{
   ins_encode %{
     __ vmulss($dst$$XMMRegister, $src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_mem);
 %}
 
 instruct mulF_reg_imm(regF dst, regF src, immF con) %{
@@ -3321,7 +3321,7 @@ instruct mulF_reg_imm(regF dst, regF src, immF con) %{
   ins_encode %{
     __ vmulss($dst$$XMMRegister, $src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct mulD_reg(regD dst, regD src) %{
@@ -3333,7 +3333,7 @@ instruct mulD_reg(regD dst, regD src) %{
   ins_encode %{
     __ mulsd($dst$$XMMRegister, $src$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct mulD_mem(regD dst, memory src) %{
@@ -3345,7 +3345,7 @@ instruct mulD_mem(regD dst, memory src) %{
   ins_encode %{
     __ mulsd($dst$$XMMRegister, $src$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_mem);
 %}
 
 instruct mulD_imm(regD dst, immD con) %{
@@ -3356,7 +3356,7 @@ instruct mulD_imm(regD dst, immD con) %{
   ins_encode %{
     __ mulsd($dst$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct mulD_reg_reg(regD dst, regD src1, regD src2) %{
@@ -3368,7 +3368,7 @@ instruct mulD_reg_reg(regD dst, regD src1, regD src2) %{
   ins_encode %{
     __ vmulsd($dst$$XMMRegister, $src1$$XMMRegister, $src2$$XMMRegister);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_reg);
 %}
 
 instruct mulD_reg_mem(regD dst, regD src1, memory src2) %{
@@ -3380,7 +3380,7 @@ instruct mulD_reg_mem(regD dst, regD src1, memory src2) %{
   ins_encode %{
     __ vmulsd($dst$$XMMRegister, $src1$$XMMRegister, $src2$$Address);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg_mem);
 %}
 
 instruct mulD_reg_imm(regD dst, regD src, immD con) %{
@@ -3392,7 +3392,7 @@ instruct mulD_reg_imm(regD dst, regD src, immD con) %{
   ins_encode %{
     __ vmulsd($dst$$XMMRegister, $src$$XMMRegister, $constantaddress($con));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct divF_reg(regF dst, regF src) %{
@@ -3545,7 +3545,7 @@ instruct absF_reg(regF dst) %{
   ins_encode %{
     __ andps($dst$$XMMRegister, ExternalAddress(float_signmask()));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct absF_reg_reg(vlRegF dst, vlRegF src) %{
@@ -3558,7 +3558,7 @@ instruct absF_reg_reg(vlRegF dst, vlRegF src) %{
     __ vandps($dst$$XMMRegister, $src$$XMMRegister,
               ExternalAddress(float_signmask()), vlen_enc);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct absD_reg(regD dst) %{
@@ -3570,7 +3570,7 @@ instruct absD_reg(regD dst) %{
   ins_encode %{
     __ andpd($dst$$XMMRegister, ExternalAddress(double_signmask()));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct absD_reg_reg(vlRegD dst, vlRegD src) %{
@@ -3584,7 +3584,7 @@ instruct absD_reg_reg(vlRegD dst, vlRegD src) %{
     __ vandpd($dst$$XMMRegister, $src$$XMMRegister,
               ExternalAddress(double_signmask()), vlen_enc);
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct negF_reg(regF dst) %{
@@ -3595,7 +3595,7 @@ instruct negF_reg(regF dst) %{
   ins_encode %{
     __ xorps($dst$$XMMRegister, ExternalAddress(float_signflip()));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct negF_reg_reg(vlRegF dst, vlRegF src) %{
@@ -3607,7 +3607,7 @@ instruct negF_reg_reg(vlRegF dst, vlRegF src) %{
     __ vnegatess($dst$$XMMRegister, $src$$XMMRegister,
                  ExternalAddress(float_signflip()));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 instruct negD_reg(regD dst) %{
@@ -3619,7 +3619,7 @@ instruct negD_reg(regD dst) %{
   ins_encode %{
     __ xorpd($dst$$XMMRegister, ExternalAddress(double_signflip()));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg);
 %}
 
 instruct negD_reg_reg(vlRegD dst, vlRegD src) %{
@@ -3632,7 +3632,7 @@ instruct negD_reg_reg(vlRegD dst, vlRegD src) %{
     __ vnegatesd($dst$$XMMRegister, $src$$XMMRegister,
                  ExternalAddress(double_signflip()));
   %}
-  ins_pipe(pipe_slow);
+  ins_pipe(fpu_reg_reg);
 %}
 
 // sqrtss instruction needs destination register to be pre initialized for best performance
