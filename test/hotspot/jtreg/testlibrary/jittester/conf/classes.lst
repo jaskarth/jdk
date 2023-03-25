@@ -12,8 +12,15 @@ java.lang.Double
 java.lang.Math
 java.lang.System
 java.lang.Runnable
+java.lang.StringBuilder
+java.math.BigInteger
+java.math.BigDecimal
 java.util.AbstractSet
 java.util.HashSet
+java.util.LinkedHashSet
+java.util.AbstractList
+java.util.ArrayList
+java.util.LinkedList
 java.lang.RuntimeException
 java.lang.IllegalArgumentException
 java.lang.NumberFormatException

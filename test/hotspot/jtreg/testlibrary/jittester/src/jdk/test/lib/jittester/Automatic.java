@@ -153,6 +153,7 @@ public class Automatic {
                 // such errors are ignored.
                 System.out.println("Test_" + counter + " ignored, generation failed due to " +
                         ignored.getMessage());
+                ignored.printStackTrace();
             }
         } while (counter < ProductionParams.numberOfTests.value());
     }
