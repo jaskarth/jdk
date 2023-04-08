@@ -79,9 +79,17 @@
 #ifdef _LP64
   // No CMOVF/CMOVD with SSE2
   static int float_cmove_cost() { return ConditionalMoveLimit; }
+
+  static constexpr bool cmove_highly_predictable() {
+    return false;
+  }
 #else
   // No CMOVF/CMOVD with SSE/SSE2
   static int float_cmove_cost() { return (UseSSE>=1) ? ConditionalMoveLimit : 0; }
+
+static bool cmove_highly_predictable() {
+  return (UseAVX >= 2);
+}
 #endif
 
   static bool narrow_oop_use_complex_address() {

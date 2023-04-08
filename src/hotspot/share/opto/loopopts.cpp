@@ -625,7 +625,6 @@ Node *PhaseIdealLoop::convert_add_to_muladd(Node* n) {
 // "cheap enough".  We are pretty much limited to CFG diamonds that merge
 // 1 or 2 items with a total of 1 or 2 ops executed speculatively.
 Node *PhaseIdealLoop::conditional_move( Node *region ) {
-
   assert(region->is_Region(), "sanity check");
   if (region->req() != 3) return nullptr;
 
@@ -753,6 +752,242 @@ Node *PhaseIdealLoop::conditional_move( Node *region ) {
   } else if (iff->_prob < infrequent_prob ||
       iff->_prob > (1.0f - infrequent_prob))
     return nullptr;
+
+  // --------------
+  // Now replace all Phis with CMOV's
+//  Node *cmov_ctrl = iff->in(0);
+//  uint flip = (lp->Opcode() == Op_IfTrue);
+//  Node_List wq;
+//  while (1) {
+//    PhiNode* phi = nullptr;
+//    for (DUIterator_Fast imax, i = region->fast_outs(imax); i < imax; i++) {
+//      Node *out = region->fast_out(i);
+//      if (out->is_Phi()) {
+//        phi = out->as_Phi();
+//        break;
+//      }
+//    }
+//    if (phi == nullptr || _igvn.type(phi) == Type::TOP) {
+//      break;
+//    }
+//    if (PrintOpto && VerifyLoopOptimizations) { tty->print_cr("CMOV"); }
+//    // Move speculative ops
+//    wq.push(phi);
+//    while (wq.size() > 0) {
+//      Node *n = wq.pop();
+//      for (uint j = 1; j < n->req(); j++) {
+//        Node* m = n->in(j);
+//        if (m != nullptr && !is_dominator(get_ctrl(m), cmov_ctrl)) {
+//#ifndef PRODUCT
+//          if (PrintOpto && VerifyLoopOptimizations) {
+//            tty->print("  speculate: ");
+//            m->dump();
+//          }
+//#endif
+//          set_ctrl(m, cmov_ctrl);
+//          wq.push(m);
+//        }
+//      }
+//    }
+//    Node *cmov = CMoveNode::make(cmov_ctrl, iff->in(1), phi->in(1+flip), phi->in(2-flip), _igvn.type(phi));
+//    register_new_node( cmov, cmov_ctrl );
+//    _igvn.replace_node( phi, cmov );
+//#ifndef PRODUCT
+//    if (TraceLoopOpts) {
+//      tty->print("CMOV  ");
+//      r_loop->dump_head();
+//      if (Verbose) {
+//        bol->in(1)->dump(1);
+//        cmov->dump(1);
+//      }
+//    }
+//    DEBUG_ONLY( if (VerifyLoopOptimizations) { verify(); } );
+//#endif
+//  }
+//
+//  // The useless CFG diamond will fold up later; see the optimization in
+//  // RegionNode::Ideal.
+//  _igvn._worklist.push(region);
+
+  return iff->in(1);
+}
+
+Node *PhaseIdealLoop::conditional_move_new(Node* region) {
+  assert(region->is_Region(), "must be RegionNode");
+  if (region->req() != 3 && region->in(1)->in(0)->is_If()) {
+//    C->method()->print_name(); tty->cr();
+//    tty->print_cr("Has different req: %d", region->req());
+  }
+
+  if (region->req() != 3) {
+    return nullptr;
+  }
+
+  // Check for CFG diamond
+  Node* lp = region->in(1);
+  Node* rp = region->in(2);
+  if (!lp || !rp) {
+    return nullptr;
+  }
+  Node* lp_c = lp->in(0);
+
+  if (lp_c == nullptr || lp_c != rp->in(0) || !lp_c->is_If()) {
+    return nullptr;
+  }
+
+  IfNode* iff = lp_c->as_If();
+
+  // Check for ops pinned in an arm of the diamond.
+  // Can't remove the control flow in this case
+  if (lp->outcnt() > 1) {
+    return nullptr;
+  }
+
+  if (rp->outcnt() > 1) {
+    return nullptr;
+  }
+
+  IdealLoopTree* r_loop = get_loop(region);
+  assert(r_loop == get_loop(iff), "sanity");
+  // Always convert to CMOVE if all results are used only outside this loop.
+  bool used_inside_loop = (r_loop == _ltree_root);
+  int floatingCmoveCost = Matcher::float_cmove_cost();
+
+  // Check profitability
+  int cost = 0;
+  for (DUIterator_Fast imax, i = region->fast_outs(imax); i < imax; i++) {
+    Node *out = region->fast_out(i);
+    if (!out->is_Phi()) {
+      continue; // Ignore other control edges, etc
+    }
+
+    PhiNode* phi = out->as_Phi();
+    BasicType bt = phi->type()->basic_type();
+
+    switch (bt) {
+    case T_DOUBLE:
+    case T_FLOAT: {
+      // If UseCmoveUnconditionally was specified, don't factor in cost at all for floating CMoves
+      if (C->use_cmove()) {
+        continue;
+      }
+
+      // If the cost of a floating cmove is the limit, then we know that we probably shouldn't make a CMove here
+      // This is usually the case for platforms where the node encodes as branched code anyway, so we should keep the branch
+      // to allow different optimizations on it and let GCM deal with scheduling it as it can do a better job reasoning about
+      // branch probabilities.
+      if (floatingCmoveCost == ConditionalMoveLimit) {
+        return nullptr;
+      }
+
+      cost += floatingCmoveCost;
+      break;
+    }
+    case T_LONG: {
+      cost += Matcher::long_cmove_cost(); // May encode as 2 CMOV's
+    }
+    case T_INT:                 // These all CMOV fine
+    case T_ADDRESS: {           // (RawPtr)
+      cost++;
+      break;
+    }
+    case T_NARROWOOP: // Fall through
+    case T_OBJECT: {            // Base oops are OK, but not derived oops
+      const TypeOopPtr *tp = phi->type()->make_ptr()->isa_oopptr();
+      // Derived pointers are Bad (tm): what's the Base (for GC purposes) of a
+      // CMOVE'd derived pointer?  It's a CMOVE'd derived base.  Thus
+      // CMOVE'ing a derived pointer requires we also CMOVE the base.  If we
+      // have a Phi for the base here that we convert to a CMOVE all is well
+      // and good.  But if the base is dead, we'll not make a CMOVE.  Later
+      // the allocator will have to produce a base by creating a CMOVE of the
+      // relevant bases.  This puts the allocator in the business of
+      // manufacturing expensive instructions, generally a bad plan.
+      // Just Say No to Conditionally-Moved Derived Pointers.
+      if (tp && tp->offset() != 0)
+        return nullptr;
+      cost++;
+      break;
+    }
+    default:
+      return nullptr;              // In particular, can't do memory or I/O
+    }
+
+    // Add in cost any speculative ops
+    for (uint j = 1; j < region->req(); j++) {
+      Node *proj = region->in(j);
+      Node *inp = phi->in(j);
+      if (get_ctrl(inp) == proj) { // Found local op
+        cost++;
+        // Check for a chain of dependent ops; these will all become
+        // speculative in a CMOV.
+        for (uint k = 1; k < inp->req(); k++) {
+          if (get_ctrl(inp->in(k)) == proj) {
+            cost += ConditionalMoveLimit; // Too much speculative goo
+          }
+        }
+      }
+    }
+    // See if the Phi is used by a Cmp or Narrow oop Decode/Encode.
+    // This will likely Split-If, a higher-payoff operation.
+    for (DUIterator_Fast kmax, k = phi->fast_outs(kmax); k < kmax; k++) {
+      Node* use = phi->fast_out(k);
+      if (use->is_Cmp() || use->is_DecodeNarrowPtr() || use->is_EncodeNarrowPtr()) {
+        cost += ConditionalMoveLimit;
+      }
+      // Is there a use inside the loop?
+      // Note: check only basic types since CMoveP is pinned.
+      if (!used_inside_loop && is_java_primitive(bt)) {
+        IdealLoopTree* u_loop = get_loop(has_ctrl(use) ? get_ctrl(use) : use);
+        if (r_loop == u_loop || r_loop->is_member(u_loop)) {
+          used_inside_loop = true;
+        }
+      }
+    }
+  }
+
+  Node* bol = iff->in(1);
+  if (bol->Opcode() == Op_Opaque4) {
+    return nullptr; // Ignore loop predicate checks (the Opaque4 ensures they will go away)
+  }
+  assert(bol->Opcode() == Op_Bool, "Unexpected node");
+  int cmp_op = bol->in(1)->Opcode();
+  if (cmp_op == Op_SubTypeCheck) { // SubTypeCheck expansion expects an IfNode
+    return nullptr;
+  }
+
+  float infrequent_prob = PROB_UNLIKELY_MAG(3);
+  // Ignore cost and blocks frequency if CMOVE can be moved outside the loop.
+  if (used_inside_loop && !C->use_cmove()) {
+    if (cost >= ConditionalMoveLimit) {
+      return nullptr; // Too expensive
+    }
+
+    // BlockLayoutByFrequency optimization moves infrequent branch
+    // from hot path. No point in CMOV'ing in such case (110 is used
+    // instead of 100 to take into account not exactness of float value).
+    if (BlockLayoutByFrequency) {
+      infrequent_prob = MAX2(infrequent_prob, (float)BlockLayoutMinDiamondPercentage/110.0f);
+    }
+  }
+
+  // On some architectures, it can be more beneficial to go ahead create CMOVs for highly predictable branches, especially
+  // those where the cost of the CMOV + speculative ops is less than the cost of the branch.
+  // On those architectures, skip this prediction check.
+  if ((iff->_prob < infrequent_prob || iff->_prob > (1.0f - infrequent_prob))) {
+    if (used_inside_loop) {
+      return nullptr;
+    } else if (!Matcher::cmove_highly_predictable()) {
+      // Check for highly predictable branch.  No point in CMOV'ing if we are going to predict accurately all the time.
+      return nullptr;
+    }
+  }
+
+  if ((cmp_op == Op_CmpF || cmp_op == Op_CmpD) && !C->use_cmove()) {
+    // See comment in the switch statement above for the reasoning to bail out here.
+    if (floatingCmoveCost == ConditionalMoveLimit) {
+      return nullptr;
+    }
+  }
 
   // --------------
   // Now replace all Phis with CMOV's
@@ -1040,9 +1275,24 @@ Node *PhaseIdealLoop::split_if_with_blocks_pre( Node *n ) {
   }
   // Attempt to use a conditional move instead of a phi/branch
   if (ConditionalMoveLimit > 0 && n_op == Op_Region) {
-    Node *cmov = conditional_move( n );
-    if (cmov) {
-      return cmov;
+    Node* cmov_old = conditional_move(n);
+
+    Node* cmov_new = conditional_move_new(n);
+
+    if (cmov_new) {
+      if (!cmov_old) {
+        C->method()->print_name(); tty->cr();
+        tty->print_cr("Made a cmov where the old code couldn't: %s", NodeClassNames[cmov_new->in(1)->Opcode()]);
+      }
+
+      C->method()->print_name(); tty->cr();
+      tty->print_cr("Made a cmov");
+      return cmov_new;
+    } else {
+      if (cmov_old) {
+        C->method()->print_name(); tty->cr();
+        tty->print_cr("Old code made a cmov where the new code couldn't: %s", NodeClassNames[cmov_old->in(1)->Opcode()]);
+      }
     }
   }
   if (n->is_CFG() || n->is_LoadStore()) {

@@ -67,6 +67,10 @@
   // CMOVF/CMOVD are expensive on ARM.
   static int float_cmove_cost() { return ConditionalMoveLimit; }
 
+  static constexpr bool cmove_highly_predictable() {
+    return false;
+  }
+
   static bool narrow_oop_use_complex_address() {
     NOT_LP64(ShouldNotCallThis());
     assert(UseCompressedOops, "only for compressed oops code");

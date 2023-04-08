@@ -69,6 +69,10 @@
   // Suppress CMOVF. Conditional move available on z/Architecture only from z196 onwards. Not exploited yet.
   static const int float_cmove_cost() { return ConditionalMoveLimit; }
 
+  static constexpr bool cmove_highly_predictable() {
+    return false;
+  }
+
   // Set this as clone_shift_expressions.
   static bool narrow_oop_use_complex_address() {
     if (CompressedOops::base() == NULL && CompressedOops::shift() == 0) return true;

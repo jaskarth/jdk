@@ -72,6 +72,10 @@
     return 0;
   }
 
+  static constexpr bool cmove_highly_predictable() {
+    return false;
+  }
+
   // This affects two different things:
   //  - how Decode nodes are matched
   //  - how ImplicitNullCheck opportunities are recognized

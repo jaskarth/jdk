@@ -69,6 +69,10 @@
   // fsel doesn't accept a condition register as input, so this would be slightly different.
   static int float_cmove_cost() { return ConditionalMoveLimit; }
 
+  static constexpr bool cmove_highly_predictable() {
+    return false;
+  }
+
   // This affects two different things:
   //  - how Decode nodes are matched
   //  - how ImplicitNullCheck opportunities are recognized

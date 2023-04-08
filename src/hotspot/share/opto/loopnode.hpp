@@ -1551,6 +1551,7 @@ public:
 
   // Attempt to use a conditional move instead of a phi/branch
   Node *conditional_move( Node *n );
+  Node *conditional_move_new( Node *n );
 
   // Check for aggressive application of 'split-if' optimization,
   // using basic block level info.
