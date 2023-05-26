@@ -1754,14 +1754,49 @@ void Parse::sharpen_type_after_if(BoolTest::mask btest,
     }
     break;
 
+  case BoolTest::lt: // i < 10   (-inf, 9]
+  case BoolTest::gt: // i > 10   [11, inf)
+  case BoolTest::le: // i <= 10  (-inf, 10]
+  case BoolTest::ge: // i >= 10  [10, inf)
+    if (tcon->isa_int() != nullptr) {
+      int ival = tcon->is_int()->get_con();
+
+      int lo;
+      int hi;
+      if (btest == BoolTest::lt || btest == BoolTest::le) {
+        lo = tval->is_int()->_lo;
+        hi = ival;
+        if (btest == BoolTest::lt) {
+          hi--;
+        }
+      } else {
+        lo = ival;
+        hi = tval->is_int()->_hi;
+        if (btest == BoolTest::gt) {
+          lo++;
+        }
+      }
+
+      const TypeInt* made = TypeInt::make(lo, hi, Type::WidenMin);
+      assert(!made->empty(), "Should not be empty!");
+
+      ccast = new CastIINode(val, made);
+    }
+    break;
   default:
-    // (At this point we could record int range types with CastII.)
     break;
   }
 
   if (ccast != nullptr) {
     const Type* tcc = ccast->as_Type()->type();
-    assert(tcc != tval && tcc->higher_equal(tval), "must improve");
+    if (!(tcc != tval && tcc->higher_equal(tval))) {
+      tcc->dump(); tty->cr();
+      tval->dump();tty->cr();
+      tcon->dump();tty->cr();
+      const Type* tboth = tcon->join_speculative(tval);
+      tboth->dump();tty->cr();
+      assert(false, "must improve");
+    }
     // Delay transform() call to allow recovery of pre-cast value
     // at the control merge.
     ccast->set_req(0, control());
