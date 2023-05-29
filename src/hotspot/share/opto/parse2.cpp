@@ -1790,11 +1790,11 @@ void Parse::sharpen_type_after_if(BoolTest::mask btest,
   if (ccast != nullptr) {
     const Type* tcc = ccast->as_Type()->type();
     if (!(tcc != tval && tcc->higher_equal(tval))) {
-      tcc->dump(); tty->cr();
-      tval->dump();tty->cr();
-      tcon->dump();tty->cr();
-      const Type* tboth = tcon->join_speculative(tval);
-      tboth->dump();tty->cr();
+//      tcc->dump(); tty->cr();
+//      tval->dump();tty->cr();
+//      tcon->dump();tty->cr();
+//      const Type* tboth = tcon->join_speculative(tval);
+//      tboth->dump();tty->cr();
       assert(false, "must improve");
     }
     // Delay transform() call to allow recovery of pre-cast value
