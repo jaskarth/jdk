@@ -11212,6 +11212,30 @@ instruct convI2L_reg_reg(rRegL dst, rRegI src)
   ins_pipe(ialu_reg_reg);
 %}
 
+instruct convI2L_convL2I_reg_reg(rRegL dst, rRegL src)
+%{
+  match(Set dst (ConvI2L (ConvL2I src)));
+
+  ins_cost(100);
+  format %{ "movslq  $dst, $src\t# i2l" %}
+  ins_encode %{
+    __ movslq($dst$$Register, $src$$Register);
+  %}
+  ins_pipe(ialu_reg_reg);
+%}
+
+instruct convI2L_convL2I_reg_mem(rRegL dst, memory src)
+%{
+  match(Set dst (ConvI2L (ConvL2I (LoadL src))));
+
+  ins_cost(100);
+  format %{ "movslq  $dst, $src\t# i2l" %}
+  ins_encode %{
+    __ movslq($dst$$Register, $src$$Address);
+  %}
+  ins_pipe(ialu_reg_reg);
+%}
+
 // instruct convI2L_reg_reg_foo(rRegL dst, rRegI src)
 // %{
 //   match(Set dst (ConvI2L src));
