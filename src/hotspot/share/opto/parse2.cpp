@@ -1780,7 +1780,7 @@ void Parse::sharpen_type_after_if(BoolTest::mask btest,
       const TypeInt* made = TypeInt::make(lo, hi, Type::WidenMin);
       assert(!made->empty(), "Should not be empty!");
 
-      ccast = new CastIINode(val, made);
+      ccast = new CastIINode(val, made, ConstraintCastNode::RegularDependency, false, true);
     }
     break;
   default:

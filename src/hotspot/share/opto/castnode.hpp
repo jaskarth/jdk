@@ -99,16 +99,18 @@ class CastIINode: public ConstraintCastNode {
   protected:
   // Is this node dependent on a range check?
   const bool _range_check_dependency;
+  // True if this node should be eliminated after a round of igvn.
+  const bool _remove_after_igvn;
   virtual bool cmp(const Node &n) const;
   virtual uint size_of() const;
 
   public:
-  CastIINode(Node* n, const Type* t, DependencyType dependency = RegularDependency, bool range_check_dependency = false)
-    : ConstraintCastNode(n, t, dependency), _range_check_dependency(range_check_dependency) {
+  CastIINode(Node* n, const Type* t, DependencyType dependency = RegularDependency, bool range_check_dependency = false, bool remove_after_igvn = false)
+    : ConstraintCastNode(n, t, dependency), _range_check_dependency(range_check_dependency), _remove_after_igvn(remove_after_igvn) {
     init_class_id(Class_CastII);
   }
-  CastIINode(Node* ctrl, Node* n, const Type* t, DependencyType dependency = RegularDependency, bool range_check_dependency = false)
-    : ConstraintCastNode(n, t, dependency), _range_check_dependency(range_check_dependency) {
+  CastIINode(Node* ctrl, Node* n, const Type* t, DependencyType dependency = RegularDependency, bool range_check_dependency = false, bool remove_after_igvn = false)
+    : ConstraintCastNode(n, t, dependency), _range_check_dependency(range_check_dependency), _remove_after_igvn(remove_after_igvn) {
     init_class_id(Class_CastII);
     init_req(0, ctrl);
   }
@@ -117,6 +119,10 @@ class CastIINode: public ConstraintCastNode {
   virtual Node* Identity(PhaseGVN* phase);
   virtual const Type* Value(PhaseGVN* phase) const;
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
+  const bool remove_after_igvn() const {
+    return _remove_after_igvn;
+  }
+
   const bool has_range_check() {
 #ifdef _LP64
     return _range_check_dependency;

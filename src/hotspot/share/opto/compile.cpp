@@ -4885,7 +4885,24 @@ void Compile::remove_speculative_types(PhaseIterGVN &igvn) {
     // which may optimize it out.
     for (uint next = 0; next < worklist.size(); ++next) {
       Node *n  = worklist.at(next);
-      if (n->is_Type()) {
+
+      // Iterate over outs - endless loops is unreachable from below
+      for (DUIterator_Fast imax, i = n->fast_outs(imax); i < imax; i++) {
+        Node *m = n->fast_out(i);
+        if (not_a_node(m)) {
+          continue;
+        }
+        worklist.push(m);
+      }
+
+      if (n->is_CastII()) {
+        CastIINode* castii = n->as_CastII();
+        if (castii->remove_after_igvn()) {
+          // Not needed after igvn? Kill the CastII.
+          igvn.replace_node(castii, castii->in(1));
+          modified++;
+        }
+      } else if (n->is_Type()) {
         TypeNode* tn = n->as_Type();
         const Type* t = tn->type();
         const Type* t_no_spec = t->remove_speculative();
@@ -4897,14 +4914,6 @@ void Compile::remove_speculative_types(PhaseIterGVN &igvn) {
           igvn._worklist.push(n); // give it a chance to go away
           modified++;
         }
-      }
-      // Iterate over outs - endless loops is unreachable from below
-      for (DUIterator_Fast imax, i = n->fast_outs(imax); i < imax; i++) {
-        Node *m = n->fast_out(i);
-        if (not_a_node(m)) {
-          continue;
-        }
-        worklist.push(m);
       }
     }
     // Drop the speculative part of all types in the igvn's type table
