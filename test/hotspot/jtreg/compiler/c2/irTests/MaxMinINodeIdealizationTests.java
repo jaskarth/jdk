@@ -46,10 +46,12 @@ public class MaxMinINodeIdealizationTests {
                  "testMax2LNoLeftAdd",
                  "testMax3",
                  "testMax4",
+                 "testMax5",
                  "testMin1",
                  "testMin2",
                  "testMin3",
-                 "testMin4"})
+                 "testMin4",
+                 "testMin5"})
     public void runPositiveTests() {
         int a = RunInfo.getRandom().nextInt();
         int min = Integer.MIN_VALUE;
@@ -76,11 +78,13 @@ public class MaxMinINodeIdealizationTests {
         Asserts.assertEQ(Math.max(a >> 1, ((a >> 1) + 11))                          , testMax2LNoLeftAdd(a));
         Asserts.assertEQ(Math.max(a, a)                                             , testMax3(a));
         Asserts.assertEQ(0                                                          , testMax4(a));
+        Asserts.assertEQ(8                                                          , testMax5(a));
 
         Asserts.assertEQ(Math.min(((a >> 1) + 100), Math.min(((a >> 1) + 150), 200)), testMin1(a));
         Asserts.assertEQ(Math.min(((a >> 1) + 10), ((a >> 1) + 11))                 , testMin2(a));
         Asserts.assertEQ(Math.min(a, a)                                             , testMin3(a));
         Asserts.assertEQ(0                                                          , testMin4(a));
+        Asserts.assertEQ(a & 7                                                      , testMin5(a));
     }
 
     // The transformations in test*1 and test*2 can happen only if the compiler has enough information
@@ -217,6 +221,18 @@ public class MaxMinINodeIdealizationTests {
     @IR(failOn = {IRNode.MIN_I})
     public int testMin4(int i) {
         return Math.min(i, 0) > 0 ? 1 : 0;
+    }
+
+    @Test
+    @IR(failOn = {IRNode.MAX_I})
+    public int testMax5(int i) {
+        return Math.max(i & 7, 8);
+    }
+
+    @Test
+    @IR(failOn = {IRNode.MIN_I})
+    public int testMin5(int i) {
+        return Math.min(i & 7, 8);
     }
 
     @Run(test = {"testTwoLevelsDifferentXY",

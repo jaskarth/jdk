@@ -1263,6 +1263,24 @@ Node* MaxINode::Ideal(PhaseGVN* phase, bool can_reshape) {
   return IdealI(phase, can_reshape);
 }
 
+Node* MaxINode::Identity(PhaseGVN* phase) {
+  const TypeInt* t1 = phase->type(in(1))->is_int();
+  const TypeInt* t2 = phase->type(in(2))->is_int();
+
+  // Can we determine maximum statically?
+  if (t1->_lo >= t2->_hi) {
+//    phase->C->method()->print_name();
+//    tty->print_cr(" MaxI(x, y) where x > y");
+    return in(1);
+  } else if (t2->_lo >= t1->_hi) {
+//    phase->C->method()->print_name();
+//    tty->print_cr(" MaxI(x, y) where y > x");
+    return in(2);
+  }
+
+  return MaxNode::Identity(phase);
+}
+
 //=============================================================================
 //------------------------------add_ring---------------------------------------
 // Supplied function returns the sum of the inputs.
@@ -1280,6 +1298,24 @@ const Type *MaxINode::add_ring( const Type *t0, const Type *t1 ) const {
 // "MIN2(x+c0,MIN2(y,x+c1))".  Pick the smaller constant: "MIN2(x+c0,y)"
 Node* MinINode::Ideal(PhaseGVN* phase, bool can_reshape) {
   return IdealI(phase, can_reshape);
+}
+
+Node* MinINode::Identity(PhaseGVN* phase) {
+  const TypeInt* t1 = phase->type(in(1))->is_int();
+  const TypeInt* t2 = phase->type(in(2))->is_int();
+
+  // Can we determine minimum statically?
+  if (t1->_lo >= t2->_hi) {
+//    phase->C->method()->print_name();
+//    tty->print_cr(" MinI(x, y) where x > y");
+    return in(2);
+  } else if (t2->_lo >= t1->_hi) {
+//    phase->C->method()->print_name();
+//    tty->print_cr(" MinI(x, y) where y > x");
+    return in(1);
+  }
+
+  return MaxNode::Identity(phase);
 }
 
 //------------------------------add_ring---------------------------------------
@@ -1424,9 +1460,48 @@ Node* MinLNode::Ideal(PhaseGVN* phase, bool can_reshape) {
   return nullptr;
 }
 
+int MaxNode::opposite_opcode() {
+  if (Opcode() == max_opcode()) {
+    return min_opcode();
+  } else {
+    assert(Opcode() == min_opcode(), "Caller should be either %s or %s, but is %s", NodeClassNames[max_opcode()], NodeClassNames[min_opcode()], NodeClassNames[Opcode()]);
+    return max_opcode();
+  }
+}
+
+// find redundant op(x, op(x, y)) and op(x, opposite_op(x, y))
+Node* MaxNode::find_redundant_operation(Node* base, Node* other) {
+  if (base->Opcode() == Opcode() || base->Opcode() == opposite_opcode()) {
+    Node* n1 = base->in(1);
+    Node* n2 = base->in(2);
+
+    if (n1 == other || n2 == other) {
+      // If the operations are the same, then return the inner operation.
+      // If the operations are different, then return the other
+      return base->Opcode() == Opcode() ? base : other;
+    }
+  }
+
+  return nullptr;
+}
+
 Node* MaxNode::Identity(PhaseGVN* phase) {
   if (in(1) == in(2)) {
       return in(1);
+  }
+
+  Node* identity_1 = find_redundant_operation(in(2), in(1));
+  if (identity_1 != nullptr) {
+//    phase->C->method()->print_name();
+//    tty->print_cr(" Found one with %s(x, %s(x, y))", NodeClassNames[Opcode()], NodeClassNames[in(2)->Opcode()]);
+    return identity_1;
+  }
+
+  Node* identity_2 = find_redundant_operation(in(1), in(2));
+  if (identity_2 != nullptr) {
+//    phase->C->method()->print_name();
+//    tty->print_cr(" Found one with %s(%s(x, y), x)", NodeClassNames[Opcode()], NodeClassNames[in(1)->Opcode()]);
+    return identity_2;
   }
 
   return AddNode::Identity(phase);

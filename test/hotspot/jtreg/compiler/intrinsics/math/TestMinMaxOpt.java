@@ -60,6 +60,34 @@ public class TestMinMaxOpt {
 
     @Test
     @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MIN_I, "1"})
+    private static int testIntMin1(int v) {
+        return Math.min(v, Math.min(v, 25));
+    }
+
+    @Check(test = "testIntMin1")
+    public static void checkTestIntMin1(int result) {
+        if (result != 25) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MIN_I, "0", IRNode.MAX_I, "0"})
+    private static int testIntMin2(int v) {
+        return Math.min(v, Math.max(v, 25));
+    }
+
+    @Check(test = "testIntMin2")
+    public static void checkTestIntMin2(int result) {
+        if (result != 42) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
     @IR(failOn = {IRNode.MAX_I})
     private static int testIntMax(int v) {
         return Math.max(v, v);
@@ -67,6 +95,34 @@ public class TestMinMaxOpt {
 
     @Check(test = "testIntMax")
     public static void checkTestIntMax(int result) {
+        if (result != 42) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MAX_I, "1"})
+    private static int testIntMax1(int v) {
+        return Math.max(v, Math.max(v, 50));
+    }
+
+    @Check(test = "testIntMax1")
+    public static void checkTestIntMax1(int result) {
+        if (result != 50) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MIN_I, "0", IRNode.MAX_I, "0"})
+    private static int testIntMax2(int v) {
+        return Math.max(v, Math.min(v, 25));
+    }
+
+    @Check(test = "testIntMax2")
+    public static void checkTestIntMax2(int result) {
         if (result != 42) {
             throw new RuntimeException("Incorrect result: " + result);
         }
@@ -116,6 +172,34 @@ public class TestMinMaxOpt {
 
     @Test
     @Arguments(values = {Argument.NUMBER_42})
+    @IR(applyIfPlatform = {"64-bit", "true"}, counts = {IRNode.MIN_F, "1"})
+    private static float testFloatMin1(float v) {
+        return Math.min(v, Math.min(v, 25));
+    }
+
+    @Check(test = "testFloatMin1")
+    public static void checkTestFloatMin1(float result) {
+        if (result != 25) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MIN_F, "0", IRNode.MAX_F, "0"})
+    private static float testFloatMin2(float v) {
+        return Math.min(v, Math.max(v, 25));
+    }
+
+    @Check(test = "testFloatMin2")
+    public static void checkTestFloatMin2(float result) {
+        if (result != 42) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
     @IR(failOn = {IRNode.MAX_F})
     private static float testFloatMax(float v) {
         return Math.max(v, v);
@@ -123,6 +207,34 @@ public class TestMinMaxOpt {
 
     @Check(test = "testFloatMax")
     public static void checkTestFloatMax(float result) {
+        if (result != 42) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(applyIfPlatform = {"64-bit", "true"}, counts = {IRNode.MAX_F, "1"})
+    private static float testFloatMax1(float v) {
+        return Math.max(v, Math.max(v, 50));
+    }
+
+    @Check(test = "testFloatMax1")
+    public static void checkTestFloatMax1(float result) {
+        if (result != 50) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MIN_F, "0", IRNode.MAX_F, "0"})
+    private static float testFloatMax2(float v) {
+        return Math.max(v, Math.min(v, 25));
+    }
+
+    @Check(test = "testFloatMax2")
+    public static void checkTestFloatMax2(float result) {
         if (result != 42) {
             throw new RuntimeException("Incorrect result: " + result);
         }
@@ -144,6 +256,34 @@ public class TestMinMaxOpt {
 
     @Test
     @Arguments(values = {Argument.NUMBER_42})
+    @IR(applyIfPlatform = {"64-bit", "true"}, counts = {IRNode.MIN_D, "1"})
+    private static double testDoubleMin1(double v) {
+        return Math.min(v, Math.min(v, 25));
+    }
+
+    @Check(test = "testDoubleMin1")
+    public static void checkTestDoubleMin1(double result) {
+        if (result != 25) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MIN_D, "0", IRNode.MAX_D, "0"})
+    private static double testDoubleMin2(double v) {
+        return Math.min(v, Math.max(v, 25));
+    }
+
+    @Check(test = "testDoubleMin2")
+    public static void checkTestDoubleMin2(double result) {
+        if (result != 42) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
     @IR(failOn = {IRNode.MAX_D})
     private static double testDoubleMax(double v) {
         return Math.max(v, v);
@@ -151,6 +291,34 @@ public class TestMinMaxOpt {
 
     @Check(test = "testDoubleMax")
     public static void checkTestDoubleMax(double result) {
+        if (result != 42) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(applyIfPlatform = {"64-bit", "true"}, counts = {IRNode.MAX_D, "1"})
+    private static double testDoubleMax1(double v) {
+        return Math.max(v, Math.max(v, 50));
+    }
+
+    @Check(test = "testDoubleMax1")
+    public static void checkTestDoubleMax1(double result) {
+        if (result != 50) {
+            throw new RuntimeException("Incorrect result: " + result);
+        }
+    }
+
+    @Test
+    @Arguments(values = {Argument.NUMBER_42})
+    @IR(counts = {IRNode.MIN_D, "0", IRNode.MAX_D, "0"})
+    private static double testDoubleMax2(double v) {
+        return Math.max(v, Math.min(v, 25));
+    }
+
+    @Check(test = "testDoubleMax2")
+    public static void checkTestDoubleMax2(double result) {
         if (result != 42) {
             throw new RuntimeException("Incorrect result: " + result);
         }
