@@ -73,7 +73,8 @@ public:
   SubINode( Node *in1, Node *in2 ) : SubNode(in1,in2) {}
   virtual int Opcode() const;
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
-  virtual const Type *sub( const Type *, const Type * ) const;
+  static const Type* sub_types(const Type* t1, const Type* t2);
+  virtual const Type* sub(const Type* t1, const Type* t2) const { return sub_types(t1, t2); };
   const Type *add_id() const { return TypeInt::ZERO; }
   const Type *bottom_type() const { return TypeInt::INT; }
   virtual uint ideal_reg() const { return Op_RegI; }
@@ -86,7 +87,8 @@ public:
   SubLNode( Node *in1, Node *in2 ) : SubNode(in1,in2) {}
   virtual int Opcode() const;
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
-  virtual const Type *sub( const Type *, const Type * ) const;
+  static const Type* sub_types(const Type* t1, const Type* t2);
+  virtual const Type* sub(const Type* t1, const Type* t2) const { return sub_types(t1, t2); };
   const Type *add_id() const { return TypeLong::ZERO; }
   const Type *bottom_type() const { return TypeLong::LONG; }
   virtual uint ideal_reg() const { return Op_RegL; }

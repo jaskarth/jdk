@@ -673,7 +673,12 @@ void Type::Initialize_shared(Compile* current) {
   // get_zero_type() should not happen for T_CONFLICT
   _zero_type[T_CONFLICT]= nullptr;
 
-  TypeVect::VECTMASK = (TypeVect*)(new TypeVectMask(TypeInt::BOOL, MaxVectorSize))->hashcons();
+  GrowableArray<const Type*> types;
+  for (int i = 0; i < MaxVectorSize; ++i) {
+    types.push(TypeInt::BOOL);
+  }
+
+  TypeVect::VECTMASK = (TypeVect*)(new TypeVectMask(T_INT, MaxVectorSize, &types))->hashcons();
   mreg2type[Op_RegVectMask] = TypeVect::VECTMASK;
 
   if (Matcher::supports_scalable_vector()) {
@@ -2485,29 +2490,31 @@ const TypeVect *TypeVect::VECTZ = nullptr; // 512-bit vectors
 const TypeVect *TypeVect::VECTMASK = nullptr; // predicate/mask vector
 
 //------------------------------make-------------------------------------------
-const TypeVect* TypeVect::make(const Type *elem, uint length, bool is_mask) {
+const TypeVect* TypeVect::make(BasicType elem_bt, uint length, GrowableArray<const Type*>* types, bool is_mask) {
   if (is_mask) {
-    return makemask(elem, length);
+    return makemask(elem_bt, length);
   }
-  BasicType elem_bt = elem->array_element_basic_type();
+
   assert(is_java_primitive(elem_bt), "only primitive types in vector");
   assert(Matcher::vector_size_supported(elem_bt, length), "length in range");
+  assert(length == (uint)types->length(), "Length and type length must be same");
+
   int size = length * type2aelembytes(elem_bt);
   switch (Matcher::vector_ideal_reg(size)) {
   case Op_VecA:
-    return (TypeVect*)(new TypeVectA(elem, length))->hashcons();
+    return (TypeVect*)(new TypeVectA(elem_bt, length, types))->hashcons();
   case Op_VecS:
-    return (TypeVect*)(new TypeVectS(elem, length))->hashcons();
+    return (TypeVect*)(new TypeVectS(elem_bt, length, types))->hashcons();
   case Op_RegL:
   case Op_VecD:
   case Op_RegD:
-    return (TypeVect*)(new TypeVectD(elem, length))->hashcons();
+    return (TypeVect*)(new TypeVectD(elem_bt, length, types))->hashcons();
   case Op_VecX:
-    return (TypeVect*)(new TypeVectX(elem, length))->hashcons();
+    return (TypeVect*)(new TypeVectX(elem_bt, length, types))->hashcons();
   case Op_VecY:
-    return (TypeVect*)(new TypeVectY(elem, length))->hashcons();
+    return (TypeVect*)(new TypeVectY(elem_bt, length, types))->hashcons();
   case Op_VecZ:
-    return (TypeVect*)(new TypeVectZ(elem, length))->hashcons();
+    return (TypeVect*)(new TypeVectZ(elem_bt, length, types))->hashcons();
   }
  ShouldNotReachHere();
   return nullptr;
@@ -2515,6 +2522,12 @@ const TypeVect* TypeVect::make(const Type *elem, uint length, bool is_mask) {
 
 const TypeVect *TypeVect::makemask(const Type* elem, uint length) {
   BasicType elem_bt = elem->array_element_basic_type();
+
+  GrowableArray<const Type*> types;
+  for (uint i = 0; i < length; ++i) {
+    types.push(elem);
+  }
+
   if (Matcher::has_predicated_vectors() &&
       Matcher::match_rule_supported_vector_masked(Op_VectorLoadMask, length, elem_bt)) {
     return TypeVectMask::make(elem, length);
@@ -2542,7 +2555,14 @@ const Type *TypeVect::xmeet( const Type *t ) const {
     assert(  base() == v->base(), "");
     assert(length() == v->length(), "");
     assert(element_basic_type() == v->element_basic_type(), "");
-    return TypeVect::makemask(_elem->xmeet(v->_elem), _length);
+
+    GrowableArray<const Type*> types;
+
+    for (int i = 0; i < _types.length(); ++i) {
+      types.push(_types.at(i)->xmeet(v->_types.at(i)));
+    }
+
+    return TypeVect::makemask(element_basic_type(), _length);
   }
   case VectorA:
   case VectorS:
@@ -2554,7 +2574,14 @@ const Type *TypeVect::xmeet( const Type *t ) const {
     assert(  base() == v->base(), "");
     assert(length() == v->length(), "");
     assert(element_basic_type() == v->element_basic_type(), "");
-    return TypeVect::make(_elem->xmeet(v->_elem), _length);
+
+    GrowableArray<const Type*> types;
+
+    for (int i = 0; i < _types.length(); ++i) {
+      types.push(_types.at(i)->xmeet(v->_types.at(i)));
+    }
+
+    return TypeVect::make(_type, _length, &types, false);
   }
   case Top:
     break;
@@ -2564,21 +2591,43 @@ const Type *TypeVect::xmeet( const Type *t ) const {
 
 //------------------------------xdual------------------------------------------
 // Dual: compute field-by-field dual
-const Type *TypeVect::xdual() const {
-  return new TypeVect(base(), _elem->dual(), _length);
+const Type* TypeVect::xdual() const {
+  GrowableArray<const Type*> types;
+
+  for (int i = 0; i < _types.length(); ++i) {
+    types.push(_types.at(i)->dual());
+  }
+
+  return new TypeVect(base(), _type, _length, &types);
 }
 
 //------------------------------eq---------------------------------------------
 // Structural equality check for Type representations
-bool TypeVect::eq(const Type *t) const {
-  const TypeVect *v = t->is_vect();
-  return (_elem == v->_elem) && (_length == v->_length);
+bool TypeVect::eq(const Type* t) const {
+  const TypeVect* v = t->is_vect();
+
+  if (_length != v->_length || _type != v->_type) {
+    return false;
+  }
+
+  for (int i = 0; i < _types.length(); ++i) {
+    if (_types.at(i) != v->_types.at(i)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 //------------------------------hash-------------------------------------------
 // Type-specific hashing function.
-uint TypeVect::hash(void) const {
-  return (uint)(uintptr_t)_elem + (uint)(uintptr_t)_length;
+uint TypeVect::hash() const {
+  uint hash = 0;
+  for (int i = 0; i < _types.length(); ++i) {
+    hash += _types.at(i)->hash();
+  }
+
+  return (uint)_type + (uint)(uintptr_t)_length + hash;
 }
 
 //------------------------------singleton--------------------------------------
@@ -2592,7 +2641,8 @@ bool TypeVect::singleton(void) const {
 }
 
 bool TypeVect::empty(void) const {
-  return _elem->empty();
+//  return _elem->empty();
+  return false;
 }
 
 //------------------------------dump2------------------------------------------
@@ -2616,19 +2666,58 @@ void TypeVect::dump2(Dict &d, uint depth, outputStream *st) const {
   default:
     ShouldNotReachHere();
   }
-  st->print("%d]:{", _length);
-  _elem->dump2(d, depth, st);
+  st->print("%d]: {", _length);
+
+  bool same = true;
+  const Type* first = _types.at(0);
+  for (uint i = 0; i < _length; i++) {
+    if (_types.at(i) != first) {
+      same = false;
+      break;
+    }
+  }
+
+  if (same) {
+    st->print("%d x ", _length);
+    first->dump2(d, depth, st);
+  } else {
+    for (uint i = 0; i < _length; i++) {
+      _types.at(i)->dump2(d, depth, st);
+      if (i < _length - 1) {
+        st->print(", ");
+      }
+    }
+  }
+
+//  _elem->dump2(d, depth, st);
   st->print("}");
 }
 #endif
 
 bool TypeVectMask::eq(const Type *t) const {
   const TypeVectMask *v = t->is_vectmask();
-  return (element_type() == v->element_type()) && (length() == v->length());
+
+  if (length() != v->length() || element_basic_type() != v->element_basic_type()) {
+    return false;
+  }
+
+  for (int i = 0; i < types().length(); ++i) {
+    if (types().at(i) != v->types().at(i)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 const Type *TypeVectMask::xdual() const {
-  return new TypeVectMask(element_type()->dual(), length());
+  GrowableArray<const Type*> _types;
+
+  for (int i = 0; i < types().length(); ++i) {
+    _types.push(types().at(i)->dual());
+  }
+
+  return new TypeVectMask(element_basic_type(), length(), &_types);
 }
 
 const TypeVectMask *TypeVectMask::make(const BasicType elem_bt, uint length) {
@@ -2636,7 +2725,14 @@ const TypeVectMask *TypeVectMask::make(const BasicType elem_bt, uint length) {
 }
 
 const TypeVectMask *TypeVectMask::make(const Type* elem, uint length) {
-  const TypeVectMask* mtype = Matcher::predicate_reg_type(elem, length);
+  BasicType elem_bt = elem->array_element_basic_type();
+
+  GrowableArray<const Type*> types;
+  for (uint i = 0; i < length; ++i) {
+    types.push(elem);
+  }
+
+  const TypeVectMask* mtype = Matcher::predicate_reg_type(elem_bt, length, &types);
   return (TypeVectMask*) const_cast<TypeVectMask*>(mtype)->hashcons();
 }
 

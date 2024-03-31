@@ -848,6 +848,273 @@ VectorNode* VectorNode::shift_count(int opc, Node* cnt, uint vlen, BasicType bt)
   }
 }
 
+const Type* VectorAddNode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+  const Type* t2 = phase->type(in(2));
+
+  // Either input is TOP ==> the result is TOP
+  if( t1 == Type::TOP ) return Type::TOP;
+  if( t2 == Type::TOP ) return Type::TOP;
+
+  const TypeVect* v1 = t1->is_vect();
+  const TypeVect* v2 = t2->is_vect();
+
+  assert(v1->length() == length(), "lengths must be same");
+  assert(v2->length() == length(), "lengths must be same");
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    const Type* r1 = v1->types().at(i);
+    const Type* r2 = v2->types().at(i);
+
+    const Type *elem = lane_add_ring(r1, r2);
+
+    types.push(elem);
+  }
+
+  return TypeVect::make(vect_type()->element_basic_type(), length(), &types);
+}
+
+const Type* VectorMulNode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+  const Type* t2 = phase->type(in(2));
+
+  // Either input is TOP ==> the result is TOP
+  if( t1 == Type::TOP ) return Type::TOP;
+  if( t2 == Type::TOP ) return Type::TOP;
+
+  const TypeVect* v1 = t1->is_vect();
+  const TypeVect* v2 = t2->is_vect();
+
+  assert(v1->length() == length(), "lengths must be same");
+  assert(v2->length() == length(), "lengths must be same");
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    const Type* r1 = v1->types().at(i);
+    const Type* r2 = v2->types().at(i);
+
+    const Type *elem = lane_mul_ring(r1, r2);
+
+    types.push(elem);
+  }
+
+  return TypeVect::make(vect_type()->element_basic_type(), length(), &types);
+}
+
+const Type* VectorSubNode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+  const Type* t2 = phase->type(in(2));
+
+  // Either input is TOP ==> the result is TOP
+  if( t1 == Type::TOP ) return Type::TOP;
+  if( t2 == Type::TOP ) return Type::TOP;
+
+  const TypeVect* v1 = t1->is_vect();
+  const TypeVect* v2 = t2->is_vect();
+
+  assert(v1->length() == length(), "lengths must be same");
+  assert(v2->length() == length(), "lengths must be same");
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    const Type* r1 = v1->types().at(i);
+    const Type* r2 = v2->types().at(i);
+
+    const Type *elem = lane_sub(r1, r2);
+
+    types.push(elem);
+  }
+
+  return TypeVect::make(vect_type()->element_basic_type(), length(), &types);
+}
+
+const Type* AndVNode::lane_mul_ring(const Type* t1, const Type* t2) const {
+  if (t1->isa_int()) {
+    return AndINode::mul_types(t1, t2);
+  } else if (t1->isa_long()) {
+    return AndLNode::mul_types(t1, t2);
+  } else {
+    assert(false, "what type are we?");
+    return nullptr;
+  }
+}
+
+const Type* LShiftCntVNode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+
+  // Input is TOP => TOP
+  if (t1 == Type::TOP) {
+    return Type::TOP;
+  }
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    types.push(t1);
+  }
+
+  return TypeVect::make(T_INT, length(), &types);
+}
+
+
+const Type* RShiftCntVNode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+
+  // Input is TOP => TOP
+  if (t1 == Type::TOP) {
+    return Type::TOP;
+  }
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    types.push(t1);
+  }
+
+  return TypeVect::make(T_INT, length(), &types);
+}
+
+const Type* ReplicateNode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+
+  // Input is TOP => TOP
+  if (t1 == Type::TOP) {
+    return Type::TOP;
+  }
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    types.push(t1);
+  }
+
+  return TypeVect::make(vect_type()->element_basic_type(), length(), &types);
+}
+
+static const TypeInt* urshift_value(const TypeInt* r1, const TypeInt* r2) {
+  if (r2->is_con()) {
+    uint shift = r2->get_con();
+    shift &= BitsPerJavaInteger-1;  // semantics of Java shifts
+    // Shift by a multiple of 32 does nothing:
+    if (shift == 0)  return r1;
+    // Calculate reasonably aggressive bounds for the result.
+    jint lo = (juint)r1->_lo >> (juint)shift;
+    jint hi = (juint)r1->_hi >> (juint)shift;
+    if (r1->_hi >= 0 && r1->_lo < 0) {
+      // If the type has both negative and positive values,
+      // there are two separate sub-domains to worry about:
+      // The positive half and the negative half.
+      jint neg_lo = lo;
+      jint neg_hi = (juint)-1 >> (juint)shift;
+      jint pos_lo = (juint) 0 >> (juint)shift;
+      jint pos_hi = hi;
+      lo = MIN2(neg_lo, pos_lo);  // == 0
+      hi = MAX2(neg_hi, pos_hi);  // == -1 >>> shift;
+    }
+    assert(lo <= hi, "must have valid bounds");
+    const TypeInt* ti = TypeInt::make(lo, hi, MAX2(r1->_widen,r2->_widen));
+#ifdef ASSERT
+    // Make sure we get the sign-capture idiom correct.
+    if (shift == BitsPerJavaInteger-1) {
+      if (r1->_lo >= 0) assert(ti == TypeInt::ZERO, ">>>31 of + is 0");
+      if (r1->_hi < 0)  assert(ti == TypeInt::ONE,  ">>>31 of - is +1");
+    }
+#endif
+    return ti;
+  }
+
+  return TypeInt::INT;
+}
+
+static const TypeInt* lshift_value(const TypeInt* r1, const TypeInt* r2) {
+  if (!r2->is_con()) {
+    return TypeInt::INT;
+  }
+
+  uint shift = r2->get_con();
+  shift &= BitsPerJavaInteger-1;  // semantics of Java shifts
+  // Shift by a multiple of 32 does nothing:
+  if (shift == 0)  return r1;
+
+  // If the shift is a constant, shift the bounds of the type,
+  // unless this could lead to an overflow.
+  if (!r1->is_con()) {
+    jint lo = r1->_lo, hi = r1->_hi;
+    if (((lo << shift) >> shift) == lo &&
+        ((hi << shift) >> shift) == hi) {
+      // No overflow.  The range shifts up cleanly.
+      return TypeInt::make((jint)lo << (jint)shift,
+                           (jint)hi << (jint)shift,
+                           MAX2(r1->_widen,r2->_widen));
+    }
+
+    return TypeInt::INT;
+  }
+
+  return TypeInt::make( (jint)r1->get_con() << (jint)shift );
+}
+
+const Type* LShiftVINode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+  const Type* t2 = phase->type(in(2));
+
+  // Either input is TOP ==> the result is TOP
+  if( t1 == Type::TOP ) return Type::TOP;
+  if( t2 == Type::TOP ) return Type::TOP;
+
+  const TypeVect* v1 = t1->is_vect();
+  const TypeVect* v2 = t2->is_vect();
+
+  assert(v1->length() == length(), "lengths must be same");
+  assert(v2->length() == length(), "lengths must be same");
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    const TypeInt* r1 = v1->types().at(i)->is_int();
+    const TypeInt* r2 = v2->types().at(i)->is_int();
+
+    const TypeInt *elem = lshift_value(r1, r2);
+
+    types.push(elem);
+  }
+
+  return TypeVect::make(T_INT, length(), &types);
+}
+
+const Type* URShiftVINode::Value(PhaseGVN* phase) const {
+  const Type* t1 = phase->type(in(1));
+  const Type* t2 = phase->type(in(2));
+
+  // Either input is TOP ==> the result is TOP
+  if( t1 == Type::TOP ) return Type::TOP;
+  if( t2 == Type::TOP ) return Type::TOP;
+
+  const TypeVect* v1 = t1->is_vect();
+  const TypeVect* v2 = t2->is_vect();
+
+  assert(v1->length() == length(), "lengths must be same");
+  assert(v2->length() == length(), "lengths must be same");
+
+  GrowableArray<const Type*> types;
+
+  for (uint i = 0; i < length(); i++) {
+    const TypeInt* r1 = v1->types().at(i)->is_int();
+    const TypeInt* r2 = v2->types().at(i)->is_int();
+
+    const TypeInt *elem = urshift_value(r1, r2);
+//    elem = r1;
+
+    types.push(elem);
+  }
+
+  return TypeVect::make(T_INT, length(), &types);
+}
+
 bool VectorNode::is_vector_rotate(int opc) {
   switch (opc) {
   case Op_RotateLeftV:
@@ -1722,11 +1989,20 @@ Node* VectorUnboxNode::Ideal(PhaseGVN* phase, bool can_reshape) {
 Node* VectorUnboxNode::Identity(PhaseGVN* phase) {
   Node* n = obj()->uncast();
   if (EnableVectorReboxing && n->Opcode() == Op_VectorBox) {
-    if (Type::cmp(bottom_type(), n->in(VectorBoxNode::Value)->bottom_type()) == 0) {
-      return n->in(VectorBoxNode::Value); // VectorUnbox (VectorBox v) ==> v
-    } else {
-      // Handled by VectorUnboxNode::Ideal().
+    const Type* t1 = bottom_type();
+    const Type* t2 = n->in(VectorBoxNode::Value)->bottom_type();
+
+    const TypeVect* v1 = t1->isa_vect();
+    const TypeVect* v2 = t2->isa_vect();
+    if (v1 != nullptr && v2 != nullptr) {
+      if (v1->element_basic_type() == v2->element_basic_type() && v1->length() == v2->length()) {
+        if (v2->higher_equal(v1)) {
+          return n->in(VectorBoxNode::Value); // VectorUnbox (VectorBox v) ==> v
+        }
+      }
     }
+
+    // All else handled by VectorUnboxNode::Ideal().
   }
   return this;
 }

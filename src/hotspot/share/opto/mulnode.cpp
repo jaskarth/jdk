@@ -445,7 +445,7 @@ const Type* IntegerTypeMultiplication<jlong>::create_type(jlong lo, jlong hi) co
 }
 
 // Compute the product type of two integer ranges into this node.
-const Type* MulINode::mul_ring(const Type* type_left, const Type* type_right) const {
+const Type* MulINode::mul_types(const Type* type_left, const Type* type_right) {
   const IntegerTypeMultiplication<jint> integer_multiplication(type_left->is_int(), type_right->is_int());
   return integer_multiplication.compute();
 }
@@ -456,7 +456,7 @@ bool MulINode::does_overflow(const TypeInt* type_left, const TypeInt* type_right
 }
 
 // Compute the product type of two long ranges into this node.
-const Type* MulLNode::mul_ring(const Type* type_left, const Type* type_right) const {
+const Type* MulLNode::mul_types(const Type* type_left, const Type* type_right) {
   const IntegerTypeMultiplication<jlong> integer_multiplication(type_left->is_long(), type_right->is_long());
   return integer_multiplication.compute();
 }
@@ -600,14 +600,19 @@ const Type* MulHiValue(const Type *t1, const Type *t2, const Type *bot) {
 // For the logical operations the ring's MUL is really a logical AND function.
 // This also type-checks the inputs for sanity.  Guaranteed never to
 // be passed a TOP or BOTTOM type, these are filtered out by pre-check.
-const Type *AndINode::mul_ring( const Type *t0, const Type *t1 ) const {
+const Type *AndINode::mul_types( const Type *t0, const Type *t1 ) {
   const TypeInt *r0 = t0->is_int(); // Handy access
   const TypeInt *r1 = t1->is_int();
   int widen = MAX2(r0->_widen,r1->_widen);
 
   // If either input is a constant, might be able to trim cases
-  if( !r0->is_con() && !r1->is_con() )
+  if( !r0->is_con() && !r1->is_con() ) {
+    if (r1->_lo >= 0) {
+      return TypeInt::make(0, r1->_hi, widen);
+    }
+
     return TypeInt::INT;        // No constants to be had
+  }
 
   // Both constants?  Return bits
   if( r0->is_con() && r1->is_con() )
@@ -750,14 +755,19 @@ Node *AndINode::Ideal(PhaseGVN *phase, bool can_reshape) {
 // For the logical operations the ring's MUL is really a logical AND function.
 // This also type-checks the inputs for sanity.  Guaranteed never to
 // be passed a TOP or BOTTOM type, these are filtered out by pre-check.
-const Type *AndLNode::mul_ring( const Type *t0, const Type *t1 ) const {
+const Type *AndLNode::mul_types( const Type *t0, const Type *t1 ) {
   const TypeLong *r0 = t0->is_long(); // Handy access
   const TypeLong *r1 = t1->is_long();
   int widen = MAX2(r0->_widen,r1->_widen);
 
   // If either input is a constant, might be able to trim cases
-  if( !r0->is_con() && !r1->is_con() )
-    return TypeLong::LONG;      // No constants to be had
+  if( !r0->is_con() && !r1->is_con() ) {
+    if (r1->_lo >= 0) {
+      return TypeLong::make(0, r1->_hi, widen);
+    }
+
+    return TypeLong::LONG;        // No constants to be had
+  }
 
   // Both constants?  Return bits
   if( r0->is_con() && r1->is_con() )

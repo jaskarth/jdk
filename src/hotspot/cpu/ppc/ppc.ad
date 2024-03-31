@@ -2167,7 +2167,7 @@ const RegMask* Matcher::predicate_reg_mask(void) {
   return nullptr;
 }
 
-const TypeVectMask* Matcher::predicate_reg_type(const Type* elemTy, int length) {
+const TypeVectMask* Matcher::predicate_reg_type(BasicType elemTy, int length, GrowableArray<const Type*>* types) {
   return nullptr;
 }
 

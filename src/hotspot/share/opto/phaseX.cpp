@@ -1176,6 +1176,11 @@ Node *PhaseIterGVN::transform( Node *n ) {
 }
 
 Node *PhaseIterGVN::transform_old(Node* n) {
+  if (n->bottom_type()->isa_vect()) {
+    tty->print("%s in ", NodeClassNames[n->Opcode()]);
+    C->method()->print_name();
+    tty->cr();
+  }
   NOT_PRODUCT(set_transforms());
   // Remove 'n' from hash table in case it gets modified
   _table.hash_delete(n);

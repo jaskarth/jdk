@@ -446,11 +446,11 @@ Node* AddINode::Identity(PhaseGVN* phase) {
 }
 
 
-//------------------------------add_ring---------------------------------------
+//------------------------------add_types--------------------------------------
 // Supplied function returns the sum of the inputs.  Guaranteed never
 // to be passed a TOP or BOTTOM type, these are filtered out by
 // pre-check.
-const Type *AddINode::add_ring( const Type *t0, const Type *t1 ) const {
+const Type *AddINode::add_types( const Type *t0, const Type *t1 ) {
   const TypeInt *r0 = t0->is_int(); // Handy access
   const TypeInt *r1 = t1->is_int();
   int lo = java_add(r0->_lo, r1->_lo);
@@ -498,7 +498,7 @@ Node* AddLNode::Identity(PhaseGVN* phase) {
 // Supplied function returns the sum of the inputs.  Guaranteed never
 // to be passed a TOP or BOTTOM type, these are filtered out by
 // pre-check.
-const Type *AddLNode::add_ring( const Type *t0, const Type *t1 ) const {
+const Type *AddLNode::add_types( const Type *t0, const Type *t1 ) {
   const TypeLong *r0 = t0->is_long(); // Handy access
   const TypeLong *r1 = t1->is_long();
   jlong lo = java_add(r0->_lo, r1->_lo);

@@ -2315,8 +2315,8 @@ const RegMask* Matcher::predicate_reg_mask(void) {
   return &_PR_REG_mask;
 }
 
-const TypeVectMask* Matcher::predicate_reg_type(const Type* elemTy, int length) {
-  return new TypeVectMask(elemTy, length);
+const TypeVectMask* Matcher::predicate_reg_type(BasicType elemTy, int length, GrowableArray<const Type*>* types) {
+  return new TypeVectMask(elemTy, length, types);
 }
 
 // Vector calling convention not yet implemented.

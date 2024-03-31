@@ -93,7 +93,8 @@ class AddINode : public AddNode {
 public:
   AddINode( Node *in1, Node *in2 ) : AddNode(in1,in2) {}
   virtual int Opcode() const;
-  virtual const Type *add_ring( const Type *, const Type * ) const;
+  static const Type* add_types(const Type* t1, const Type* t2);
+  virtual const Type* add_ring(const Type* t1, const Type* t2) const { return add_types(t1, t2); };
   virtual const Type *add_id() const { return TypeInt::ZERO; }
   virtual const Type *bottom_type() const { return TypeInt::INT; }
   int max_opcode() const { return Op_MaxI; }
@@ -110,7 +111,8 @@ class AddLNode : public AddNode {
 public:
   AddLNode( Node *in1, Node *in2 ) : AddNode(in1,in2) {}
   virtual int Opcode() const;
-  virtual const Type *add_ring( const Type *, const Type * ) const;
+  static const Type* add_types(const Type* t1, const Type* t2);
+  virtual const Type* add_ring(const Type* t1, const Type* t2) const { return add_types(t1, t2); };
   virtual const Type *add_id() const { return TypeLong::ZERO; }
   virtual const Type *bottom_type() const { return TypeLong::LONG; }
   int max_opcode() const { return Op_MaxL; }

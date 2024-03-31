@@ -1812,6 +1812,9 @@
   declare_c2_type(OrVMaskNode, VectorNode)                                \
   declare_c2_type(XorVMaskNode, VectorNode)                               \
   declare_c2_type(VectorBoxNode, Node)                                    \
+  declare_c2_type(VectorAddNode, VectorNode)                              \
+  declare_c2_type(VectorMulNode, VectorNode)                              \
+  declare_c2_type(VectorSubNode, VectorNode)                              \
   declare_c2_type(VectorBoxAllocateNode, CallStaticJavaNode)              \
   declare_c2_type(VectorTestNode, CmpNode)                                \
                                                                           \

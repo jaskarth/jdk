@@ -293,6 +293,31 @@ public:
   // Record a type for a node.
   void    set_type(const Node* n, const Type *t) {
     assert(t != nullptr, "type must not be null");
+
+    bool set = false;
+    if ( n->_idx < _types.Size()) {
+      const Type *told = type_or_null(n);
+
+      if (told != nullptr) {
+        if (t->isa_vect()) {
+          tty->print("changed type of %s from ", NodeClassNames[n->Opcode()]);
+          told->dump();
+          tty->print(" to ");
+          t->dump();
+          tty->cr();
+          set = true;
+        }
+      }
+    }
+
+    if (!set) {
+      if (t->isa_vect()) {
+        tty->print("set type of %s to ", NodeClassNames[n->Opcode()]);
+        t->dump();
+        tty->cr();
+      }
+    }
+
     _types.map(n->_idx, t);
   }
   void    clear_type(const Node* n) {
@@ -306,6 +331,11 @@ public:
     // Usually the initialization should be to n->Value(this) instead,
     // or a hand-optimized value like Type::MEMORY or Type::CONTROL.
     assert(_types[n->_idx] == nullptr, "must set the initial type just once");
+    if (n->bottom_type()->isa_vect()) {
+      tty->print("set initial bottom type of %s to ", NodeClassNames[n->Opcode()]);
+      n->bottom_type()->dump();
+      tty->cr();
+    }
     _types.map(n->_idx, n->bottom_type());
   }
   // Make sure the types array is big enough to record a size for the node n.

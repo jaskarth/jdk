@@ -24,6 +24,7 @@
 #ifndef SHARE_OPTO_VECTORNODE_HPP
 #define SHARE_OPTO_VECTORNODE_HPP
 
+#include "opto/addnode.hpp"
 #include "opto/callnode.hpp"
 #include "opto/cfgnode.hpp"
 #include "opto/loopnode.hpp"
@@ -144,36 +145,64 @@ class VectorNode : public TypeNode {
 
 //===========================Vector=ALU=Operations=============================
 
+class VectorAddNode : public VectorNode {
+public:
+  VectorAddNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1, in2, vt) {}
+  virtual const Type* Value(PhaseGVN* phase) const;
+
+  virtual const Type* lane_add_ring(const Type* t1, const Type* t2) const = 0;
+};
+
+class VectorMulNode : public VectorNode {
+public:
+  VectorMulNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1, in2, vt) {}
+  virtual const Type* Value(PhaseGVN* phase) const;
+
+  virtual const Type* lane_mul_ring(const Type* t1, const Type* t2) const = 0;
+};
+
+class VectorSubNode : public VectorNode {
+public:
+  VectorSubNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1, in2, vt) {}
+  virtual const Type* Value(PhaseGVN* phase) const;
+
+  virtual const Type* lane_sub(const Type* t1, const Type* t2) const = 0;
+};
+
 //------------------------------AddVBNode--------------------------------------
 // Vector add byte
-class AddVBNode : public VectorNode {
+class AddVBNode : public VectorAddNode {
  public:
-  AddVBNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  AddVBNode(Node* in1, Node* in2, const TypeVect* vt) : VectorAddNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_add_ring(const Type* t1, const Type* t2) const { return AddINode::add_types(t1, t2); }
 };
 
 //------------------------------AddVSNode--------------------------------------
 // Vector add char/short
-class AddVSNode : public VectorNode {
+class AddVSNode : public VectorAddNode {
  public:
-  AddVSNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  AddVSNode(Node* in1, Node* in2, const TypeVect* vt) : VectorAddNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_add_ring(const Type* t1, const Type* t2) const { return AddINode::add_types(t1, t2); }
 };
 
 //------------------------------AddVINode--------------------------------------
 // Vector add int
-class AddVINode : public VectorNode {
+class AddVINode : public VectorAddNode {
  public:
-  AddVINode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  AddVINode(Node* in1, Node* in2, const TypeVect* vt) : VectorAddNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_add_ring(const Type* t1, const Type* t2) const { return AddINode::add_types(t1, t2); }
 };
 
 //------------------------------AddVLNode--------------------------------------
 // Vector add long
-class AddVLNode : public VectorNode {
+class AddVLNode : public VectorAddNode {
 public:
-  AddVLNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1, in2, vt) {}
+  AddVLNode(Node* in1, Node* in2, const TypeVect* vt) : VectorAddNode(in1, in2, vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_add_ring(const Type* t1, const Type* t2) const { return AddLNode::add_types(t1, t2); }
 };
 
 //------------------------------AddVFNode--------------------------------------
@@ -272,34 +301,38 @@ public:
 
 //------------------------------SubVBNode--------------------------------------
 // Vector subtract byte
-class SubVBNode : public VectorNode {
+class SubVBNode : public VectorSubNode {
  public:
-  SubVBNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  SubVBNode(Node* in1, Node* in2, const TypeVect* vt) : VectorSubNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_sub(const Type* t1, const Type* t2) const { return SubINode::sub_types(t1, t2); }
 };
 
 //------------------------------SubVSNode--------------------------------------
 // Vector subtract short
-class SubVSNode : public VectorNode {
+class SubVSNode : public VectorSubNode {
  public:
-  SubVSNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  SubVSNode(Node* in1, Node* in2, const TypeVect* vt) : VectorSubNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_sub(const Type* t1, const Type* t2) const { return SubINode::sub_types(t1, t2); }
 };
 
 //------------------------------SubVINode--------------------------------------
 // Vector subtract int
-class SubVINode : public VectorNode {
+class SubVINode : public VectorSubNode {
  public:
-  SubVINode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  SubVINode(Node* in1, Node* in2, const TypeVect* vt) : VectorSubNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_sub(const Type* t1, const Type* t2) const { return SubINode::sub_types(t1, t2); }
 };
 
 //------------------------------SubVLNode--------------------------------------
 // Vector subtract long
-class SubVLNode : public VectorNode {
+class SubVLNode : public VectorSubNode {
  public:
-  SubVLNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  SubVLNode(Node* in1, Node* in2, const TypeVect* vt) : VectorSubNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_sub(const Type* t1, const Type* t2) const { return SubLNode::sub_types(t1, t2); }
 };
 
 //------------------------------SubVFNode--------------------------------------
@@ -320,34 +353,38 @@ class SubVDNode : public VectorNode {
 
 //------------------------------MulVBNode--------------------------------------
 // Vector multiply byte
-class MulVBNode : public VectorNode {
+class MulVBNode : public VectorMulNode {
  public:
-  MulVBNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1, in2, vt) {}
+  MulVBNode(Node* in1, Node* in2, const TypeVect* vt) : VectorMulNode(in1, in2, vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_mul_ring(const Type* t1, const Type* t2) const { return MulINode::mul_types(t1, t2); }
 };
 
 //------------------------------MulVSNode--------------------------------------
 // Vector multiply short
-class MulVSNode : public VectorNode {
+class MulVSNode : public VectorMulNode {
  public:
-  MulVSNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  MulVSNode(Node* in1, Node* in2, const TypeVect* vt) : VectorMulNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_mul_ring(const Type* t1, const Type* t2) const { return MulINode::mul_types(t1, t2); }
 };
 
 //------------------------------MulVINode--------------------------------------
 // Vector multiply int
-class MulVINode : public VectorNode {
+class MulVINode : public VectorMulNode {
  public:
-  MulVINode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  MulVINode(Node* in1, Node* in2, const TypeVect* vt) : VectorMulNode(in1,in2,vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_mul_ring(const Type* t1, const Type* t2) const { return MulINode::mul_types(t1, t2); }
 };
 
 //------------------------------MulVLNode--------------------------------------
 // Vector multiply long
-class MulVLNode : public VectorNode {
+class MulVLNode : public VectorMulNode {
 public:
-  MulVLNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1, in2, vt) {}
+  MulVLNode(Node* in1, Node* in2, const TypeVect* vt) : VectorMulNode(in1, in2, vt) {}
   virtual int Opcode() const;
+  virtual const Type* lane_mul_ring(const Type* t1, const Type* t2) const { return MulLNode::mul_types(t1, t2); }
 };
 
 //------------------------------MulVFNode--------------------------------------
@@ -645,6 +682,7 @@ class LShiftVINode : public ShiftVNode {
   LShiftVINode(Node* in1, Node* in2, const TypeVect* vt, bool is_var_shift=false) :
     ShiftVNode(in1,in2,vt,is_var_shift) {}
   virtual int Opcode() const;
+  virtual const Type* Value(PhaseGVN* phase) const;
 };
 
 //------------------------------LShiftVLNode-----------------------------------
@@ -716,6 +754,7 @@ class URShiftVINode : public ShiftVNode {
  public:
   URShiftVINode(Node* in1, Node* in2, const TypeVect* vt, bool is_var_shift=false) :
     ShiftVNode(in1,in2,vt,is_var_shift) {}
+  virtual const Type* Value(PhaseGVN* phase) const;
   virtual int Opcode() const;
 };
 
@@ -733,6 +772,7 @@ class URShiftVLNode : public ShiftVNode {
 class LShiftCntVNode : public VectorNode {
  public:
   LShiftCntVNode(Node* cnt, const TypeVect* vt) : VectorNode(cnt,vt) {}
+  virtual const Type* Value(PhaseGVN* phase) const;
   virtual int Opcode() const;
 };
 
@@ -741,16 +781,18 @@ class LShiftCntVNode : public VectorNode {
 class RShiftCntVNode : public VectorNode {
  public:
   RShiftCntVNode(Node* cnt, const TypeVect* vt) : VectorNode(cnt,vt) {}
+  virtual const Type* Value(PhaseGVN* phase) const;
   virtual int Opcode() const;
 };
 
 //------------------------------AndVNode---------------------------------------
 // Vector and integer
-class AndVNode : public VectorNode {
+class AndVNode : public VectorMulNode {
  public:
-  AndVNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  AndVNode(Node* in1, Node* in2, const TypeVect* vt) : VectorMulNode(in1,in2,vt) {}
   virtual int Opcode() const;
   virtual Node* Identity(PhaseGVN* phase);
+  const Type* lane_mul_ring(const Type* t1, const Type* t2) const;
 };
 
 //------------------------------AndReductionVNode--------------------------------------
@@ -1181,6 +1223,7 @@ class ReplicateNode : public VectorNode {
     assert(vt->element_basic_type() != T_CHAR, "not support");
   }
   virtual int Opcode() const;
+  virtual const Type* Value(PhaseGVN* phase) const;
 };
 
 //======================Populate_Indices_into_a_Vector=========================

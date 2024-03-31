@@ -330,7 +330,7 @@ Node *SubINode::Ideal(PhaseGVN *phase, bool can_reshape){
 
 //------------------------------sub--------------------------------------------
 // A subtract node differences it's two inputs.
-const Type *SubINode::sub( const Type *t1, const Type *t2 ) const {
+const Type *SubINode::sub_types( const Type *t1, const Type *t2 ) {
   const TypeInt *r0 = t1->is_int(); // Handy access
   const TypeInt *r1 = t2->is_int();
   int32_t lo = java_subtract(r0->_lo, r1->_hi);
@@ -507,7 +507,7 @@ Node *SubLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
 //------------------------------sub--------------------------------------------
 // A subtract node differences it's two inputs.
-const Type *SubLNode::sub( const Type *t1, const Type *t2 ) const {
+const Type *SubLNode::sub_types( const Type *t1, const Type *t2 ) {
   const TypeLong *r0 = t1->is_long(); // Handy access
   const TypeLong *r1 = t2->is_long();
   jlong lo = java_subtract(r0->_lo, r1->_hi);

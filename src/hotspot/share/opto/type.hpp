@@ -784,16 +784,24 @@ public:
 //------------------------------TypeVect---------------------------------------
 // Class of Vector Types
 class TypeVect : public Type {
-  const Type*   _elem;  // Vector's element type
-  const uint  _length;  // Elements in vector (power of 2)
+  const BasicType _type;             // Vector's basic element type
+  const uint  _length;               // Elements in vector (power of 2)
+  GrowableArray<const Type*> _types; // Lanewise types in this vector
 
 protected:
-  TypeVect(TYPES t, const Type* elem, uint length) : Type(t),
-    _elem(elem), _length(length) {}
+  TypeVect(TYPES t, BasicType type, uint length, GrowableArray<const Type*>* types) : Type(t),
+    _type(type), _length(length), _types(Compile::current()->type_arena(), length, 0, nullptr) {
+    assert(types->length() == (int)length, "Inconsistent type array length, expected %d but have %d", length, types->length());
+
+    for (uint i = 0; i < length; ++i) {
+      _types.push(types->at(i));
+    }
+  }
 
 public:
-  const Type* element_type() const { return _elem; }
-  BasicType element_basic_type() const { return _elem->array_element_basic_type(); }
+  BasicType element_basic_type() const { return _type; }
+  GrowableArray<const Type*> types() const { return _types; }
+
   uint length() const { return _length; }
   uint length_in_bytes() const {
    return _length * type2aelembytes(element_basic_type());
@@ -809,13 +817,23 @@ public:
     return make(get_const_basic_type(elem_bt), length, is_mask);
   }
   // Used directly by Replicate nodes to construct singleton vector.
-  static const TypeVect *make(const Type* elem, uint length, bool is_mask = false);
+  static const TypeVect* make(const Type* elem, uint length, bool is_mask = false) {
+    GrowableArray<const Type*> types;
+    for (uint i = 0; i < length; ++i) {
+      types.push(elem);
+    }
+
+    return make(elem->array_element_basic_type(), length, &types, is_mask);
+  }
+
+  static const TypeVect* make(BasicType elem_bt, uint length, GrowableArray<const Type*>* types, bool is_mask = false);
 
   static const TypeVect *makemask(const BasicType elem_bt, uint length) {
     // Use bottom primitive type.
     return makemask(get_const_basic_type(elem_bt), length);
   }
-  static const TypeVect *makemask(const Type* elem, uint length);
+
+  static const TypeVect* makemask(const Type* elem, uint length);
 
 
   virtual const Type *xmeet( const Type *t) const;
@@ -836,38 +854,38 @@ public:
 
 class TypeVectA : public TypeVect {
   friend class TypeVect;
-  TypeVectA(const Type* elem, uint length) : TypeVect(VectorA, elem, length) {}
+  TypeVectA(BasicType type, uint length, GrowableArray<const Type*>* types) : TypeVect(VectorA, type, length, types) {}
 };
 
 class TypeVectS : public TypeVect {
   friend class TypeVect;
-  TypeVectS(const Type* elem, uint length) : TypeVect(VectorS, elem, length) {}
+  TypeVectS(BasicType type, uint length, GrowableArray<const Type*>* types) : TypeVect(VectorS, type, length, types) {}
 };
 
 class TypeVectD : public TypeVect {
   friend class TypeVect;
-  TypeVectD(const Type* elem, uint length) : TypeVect(VectorD, elem, length) {}
+  TypeVectD(BasicType type, uint length, GrowableArray<const Type*>* types) : TypeVect(VectorD, type, length, types) {}
 };
 
 class TypeVectX : public TypeVect {
   friend class TypeVect;
-  TypeVectX(const Type* elem, uint length) : TypeVect(VectorX, elem, length) {}
+  TypeVectX(BasicType type, uint length, GrowableArray<const Type*>* types) : TypeVect(VectorX, type, length, types) {}
 };
 
 class TypeVectY : public TypeVect {
   friend class TypeVect;
-  TypeVectY(const Type* elem, uint length) : TypeVect(VectorY, elem, length) {}
+  TypeVectY(BasicType type, uint length, GrowableArray<const Type*>* types) : TypeVect(VectorY, type, length, types) {}
 };
 
 class TypeVectZ : public TypeVect {
   friend class TypeVect;
-  TypeVectZ(const Type* elem, uint length) : TypeVect(VectorZ, elem, length) {}
+  TypeVectZ(BasicType type, uint length, GrowableArray<const Type*>* types) : TypeVect(VectorZ, type, length, types) {}
 };
 
 class TypeVectMask : public TypeVect {
 public:
   friend class TypeVect;
-  TypeVectMask(const Type* elem, uint length) : TypeVect(VectorMask, elem, length) {}
+  TypeVectMask(BasicType type, uint length, GrowableArray<const Type*>* types) : TypeVect(VectorMask, type, length, types) {}
   virtual bool eq(const Type *t) const;
   virtual const Type *xdual() const;
   static const TypeVectMask* make(const BasicType elem_bt, uint length);

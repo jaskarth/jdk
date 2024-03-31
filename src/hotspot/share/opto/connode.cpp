@@ -43,7 +43,11 @@ uint ConNode::hash() const {
 }
 
 //------------------------------make-------------------------------------------
-ConNode *ConNode::make(const Type *t) {
+ConNode* ConNode::make(const Type* t) {
+  if (t->isa_vect()) { // TODO: vectmask?
+
+  }
+
   switch( t->basic_type() ) {
   case T_INT:         return new ConINode( t->is_int() );
   case T_LONG:        return new ConLNode( t->is_long() );
