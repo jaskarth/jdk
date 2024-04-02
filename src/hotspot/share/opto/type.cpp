@@ -2553,8 +2553,10 @@ const Type *TypeVect::xmeet( const Type *t ) const {
   case VectorMask: {
     const TypeVectMask* v = t->is_vectmask();
     assert(  base() == v->base(), "");
-    assert(length() == v->length(), "");
-    assert(element_basic_type() == v->element_basic_type(), "");
+
+    if (length() != v->length() || element_basic_type() != v->element_basic_type()) {
+      return Type::BOTTOM;
+    }
 
     GrowableArray<const Type*> types;
 
@@ -2572,8 +2574,10 @@ const Type *TypeVect::xmeet( const Type *t ) const {
   case VectorZ: {                // Meeting 2 vectors?
     const TypeVect* v = t->is_vect();
     assert(  base() == v->base(), "");
-    assert(length() == v->length(), "");
-    assert(element_basic_type() == v->element_basic_type(), "");
+
+    if (length() != v->length() || element_basic_type() != v->element_basic_type()) {
+      return Type::BOTTOM;
+    }
 
     GrowableArray<const Type*> types;
 
@@ -2635,9 +2639,14 @@ uint TypeVect::hash() const {
 // constants (Ldi nodes).  Vector is singleton if all elements are the same
 // constant value (when vector is created with Replicate code).
 bool TypeVect::singleton(void) const {
-// There is no Con node for vectors yet.
-//  return _elem->singleton();
-  return false;
+  for (uint i = 0; i < length(); i++) {
+    if (!type_at(i)->singleton()) {
+      return false;
+    }
+  }
+
+//  return false;
+  return true;
 }
 
 bool TypeVect::empty(void) const {
@@ -2701,8 +2710,8 @@ bool TypeVectMask::eq(const Type *t) const {
     return false;
   }
 
-  for (int i = 0; i < types().length(); ++i) {
-    if (types().at(i) != v->types().at(i)) {
+  for (uint i = 0; i < length(); ++i) {
+    if (type_at(i) != v->type_at(i)) {
       return false;
     }
   }
@@ -2713,8 +2722,8 @@ bool TypeVectMask::eq(const Type *t) const {
 const Type *TypeVectMask::xdual() const {
   GrowableArray<const Type*> _types;
 
-  for (int i = 0; i < types().length(); ++i) {
-    _types.push(types().at(i)->dual());
+  for (uint i = 0; i < length(); ++i) {
+    _types.push(type_at(i)->dual());
   }
 
   return new TypeVectMask(element_basic_type(), length(), &_types);

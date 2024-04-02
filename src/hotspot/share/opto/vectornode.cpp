@@ -865,11 +865,10 @@ const Type* VectorAddNode::Value(PhaseGVN* phase) const {
   GrowableArray<const Type*> types;
 
   for (uint i = 0; i < length(); i++) {
-    const Type* r1 = v1->types().at(i);
-    const Type* r2 = v2->types().at(i);
+    const Type* r1 = v1->type_at(i);
+    const Type* r2 = v2->type_at(i);
 
     const Type *elem = lane_add_ring(r1, r2);
-
     types.push(elem);
   }
 
@@ -893,8 +892,8 @@ const Type* VectorMulNode::Value(PhaseGVN* phase) const {
   GrowableArray<const Type*> types;
 
   for (uint i = 0; i < length(); i++) {
-    const Type* r1 = v1->types().at(i);
-    const Type* r2 = v2->types().at(i);
+    const Type* r1 = v1->type_at(i);
+    const Type* r2 = v2->type_at(i);
 
     const Type *elem = lane_mul_ring(r1, r2);
 
@@ -921,8 +920,8 @@ const Type* VectorSubNode::Value(PhaseGVN* phase) const {
   GrowableArray<const Type*> types;
 
   for (uint i = 0; i < length(); i++) {
-    const Type* r1 = v1->types().at(i);
-    const Type* r2 = v2->types().at(i);
+    const Type* r1 = v1->type_at(i);
+    const Type* r2 = v2->type_at(i);
 
     const Type *elem = lane_sub(r1, r2);
 
@@ -937,6 +936,28 @@ const Type* AndVNode::lane_mul_ring(const Type* t1, const Type* t2) const {
     return AndINode::mul_types(t1, t2);
   } else if (t1->isa_long()) {
     return AndLNode::mul_types(t1, t2);
+  } else {
+    assert(false, "what type are we?");
+    return nullptr;
+  }
+}
+
+const Type* OrVNode::lane_add_ring(const Type* t1, const Type* t2) const {
+  if (t1->isa_int()) {
+    return OrINode::add_types(t1, t2);
+  } else if (t1->isa_long()) {
+    return OrLNode::add_types(t1, t2);
+  } else {
+    assert(false, "what type are we?");
+    return nullptr;
+  }
+}
+
+const Type* XorVNode::lane_add_ring(const Type* t1, const Type* t2) const {
+  if (t1->isa_int()) {
+    return XorINode::add_types(t1, t2);
+  } else if (t1->isa_long()) {
+    return XorLNode::add_types(t1, t2);
   } else {
     assert(false, "what type are we?");
     return nullptr;
@@ -978,6 +999,20 @@ const Type* RShiftCntVNode::Value(PhaseGVN* phase) const {
   return TypeVect::make(T_INT, length(), &types);
 }
 
+static const Type* normalize_element(const Type* ele, const Type* max) {
+  const Type* meet = max->meet(ele);
+  const Type* join = max->join(ele);
+
+//  ele->dump(); tty->print(" v "); max->dump(); tty->print(" = "); max->meet(ele)->dump(); tty->cr();
+//  ele->dump(); tty->print(" ^ "); max->dump(); tty->print(" = "); max->join(ele)->dump(); tty->cr();
+
+  if (max != join) { // exceeded bounds of max, just return max
+//    return max;
+  }
+
+  return ele; // else return the join of two
+}
+
 const Type* ReplicateNode::Value(PhaseGVN* phase) const {
   const Type* t1 = phase->type(in(1));
 
@@ -986,10 +1021,13 @@ const Type* ReplicateNode::Value(PhaseGVN* phase) const {
     return Type::TOP;
   }
 
+  const Type* max = Type::get_const_basic_type(vect_type()->element_basic_type());
+
   GrowableArray<const Type*> types;
 
   for (uint i = 0; i < length(); i++) {
-    types.push(t1);
+
+    types.push(normalize_element(t1, max));
   }
 
   return TypeVect::make(vect_type()->element_basic_type(), length(), &types);
@@ -1075,8 +1113,8 @@ const Type* LShiftVINode::Value(PhaseGVN* phase) const {
   GrowableArray<const Type*> types;
 
   for (uint i = 0; i < length(); i++) {
-    const TypeInt* r1 = v1->types().at(i)->is_int();
-    const TypeInt* r2 = v2->types().at(i)->is_int();
+    const TypeInt* r1 = v1->type_at(i)->is_int();
+    const TypeInt* r2 = v2->type_at(i)->is_int();
 
     const TypeInt *elem = lshift_value(r1, r2);
 
@@ -1103,8 +1141,8 @@ const Type* URShiftVINode::Value(PhaseGVN* phase) const {
   GrowableArray<const Type*> types;
 
   for (uint i = 0; i < length(); i++) {
-    const TypeInt* r1 = v1->types().at(i)->is_int();
-    const TypeInt* r2 = v2->types().at(i)->is_int();
+    const TypeInt* r1 = v1->type_at(i)->is_int();
+    const TypeInt* r2 = v2->type_at(i)->is_int();
 
     const TypeInt *elem = urshift_value(r1, r2);
 //    elem = r1;
@@ -1952,7 +1990,7 @@ Node* VectorInsertNode::make(Node* vec, Node* new_val, int position) {
 Node* VectorUnboxNode::Ideal(PhaseGVN* phase, bool can_reshape) {
   Node* n = obj()->uncast();
   if (EnableVectorReboxing && n->Opcode() == Op_VectorBox) {
-    if (Type::cmp(bottom_type(), n->in(VectorBoxNode::Value)->bottom_type()) == 0) {
+    if (bottom_type()->higher_equal(n->in(VectorBoxNode::Value)->bottom_type())) {
       // Handled by VectorUnboxNode::Identity()
     } else {
       VectorBoxNode* vbox = static_cast<VectorBoxNode*>(n);
@@ -1992,17 +2030,13 @@ Node* VectorUnboxNode::Identity(PhaseGVN* phase) {
     const Type* t1 = bottom_type();
     const Type* t2 = n->in(VectorBoxNode::Value)->bottom_type();
 
-    const TypeVect* v1 = t1->isa_vect();
-    const TypeVect* v2 = t2->isa_vect();
-    if (v1 != nullptr && v2 != nullptr) {
-      if (v1->element_basic_type() == v2->element_basic_type() && v1->length() == v2->length()) {
-        if (v2->higher_equal(v1)) {
-          return n->in(VectorBoxNode::Value); // VectorUnbox (VectorBox v) ==> v
-        }
-      }
+    if (t2->higher_equal(t1)) {
+      return n->in(VectorBoxNode::Value); // VectorUnbox (VectorBox v) ==> v
+    } else {
+      // Handled by VectorUnboxNode::Ideal().
     }
 
-    // All else handled by VectorUnboxNode::Ideal().
+
   }
   return this;
 }

@@ -821,7 +821,7 @@ Node* OrINode::Ideal(PhaseGVN* phase, bool can_reshape) {
 // the logical operations the ring's ADD is really a logical OR function.
 // This also type-checks the inputs for sanity.  Guaranteed never to
 // be passed a TOP or BOTTOM type, these are filtered out by pre-check.
-const Type *OrINode::add_ring( const Type *t0, const Type *t1 ) const {
+const Type *OrINode::add_types( const Type *t0, const Type *t1 ) {
   const TypeInt *r0 = t0->is_int(); // Handy access
   const TypeInt *r1 = t1->is_int();
 
@@ -891,7 +891,7 @@ Node* OrLNode::Ideal(PhaseGVN* phase, bool can_reshape) {
 }
 
 //------------------------------add_ring---------------------------------------
-const Type *OrLNode::add_ring( const Type *t0, const Type *t1 ) const {
+const Type *OrLNode::add_types( const Type *t0, const Type *t1 ) {
   const TypeLong *r0 = t0->is_long(); // Handy access
   const TypeLong *r1 = t1->is_long();
 
@@ -1001,7 +1001,7 @@ const Type* XorINode::Value(PhaseGVN* phase) const {
 // the logical operations the ring's ADD is really a logical OR function.
 // This also type-checks the inputs for sanity.  Guaranteed never to
 // be passed a TOP or BOTTOM type, these are filtered out by pre-check.
-const Type *XorINode::add_ring( const Type *t0, const Type *t1 ) const {
+const Type *XorINode::add_types( const Type *t0, const Type *t1 ) {
   const TypeInt *r0 = t0->is_int(); // Handy access
   const TypeInt *r1 = t1->is_int();
 
@@ -1019,7 +1019,7 @@ const Type *XorINode::add_ring( const Type *t0, const Type *t1 ) const {
 
 //=============================================================================
 //------------------------------add_ring---------------------------------------
-const Type *XorLNode::add_ring( const Type *t0, const Type *t1 ) const {
+const Type *XorLNode::add_types( const Type *t0, const Type *t1 ) {
   const TypeLong *r0 = t0->is_long(); // Handy access
   const TypeLong *r1 = t1->is_long();
 

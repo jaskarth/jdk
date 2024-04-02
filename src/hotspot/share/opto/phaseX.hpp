@@ -294,6 +294,7 @@ public:
   void    set_type(const Node* n, const Type *t) {
     assert(t != nullptr, "type must not be null");
 
+#ifdef ASSERT
     bool set = false;
     if ( n->_idx < _types.Size()) {
       const Type *told = type_or_null(n);
@@ -317,6 +318,7 @@ public:
         tty->cr();
       }
     }
+#endif
 
     _types.map(n->_idx, t);
   }

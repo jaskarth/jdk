@@ -45,7 +45,7 @@ uint ConNode::hash() const {
 //------------------------------make-------------------------------------------
 ConNode* ConNode::make(const Type* t) {
   if (t->isa_vect()) { // TODO: vectmask?
-
+    return new ConVNode(t->is_vect());
   }
 
   switch( t->basic_type() ) {

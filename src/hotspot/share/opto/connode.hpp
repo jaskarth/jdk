@@ -25,6 +25,7 @@
 #ifndef SHARE_OPTO_CONNODE_HPP
 #define SHARE_OPTO_CONNODE_HPP
 
+#include "opto/matcher.hpp"
 #include "opto/node.hpp"
 #include "opto/opcodes.hpp"
 #include "opto/type.hpp"
@@ -141,6 +142,17 @@ public:
     return new ConDNode( TypeD::make(con) );
   }
 
+};
+
+// Vector constants
+class ConVNode : public ConNode {
+public:
+  ConVNode(const TypeVect* t) : ConNode(t) {}
+  virtual int Opcode() const;
+
+  const TypeVect* vect_type() const { return type()->is_vect(); }
+  virtual int memory_size() const { return vect_type()->length_in_bytes(); }
+  virtual uint ideal_reg() const  { return Matcher::vector_ideal_reg(memory_size()); }
 };
 
 //------------------------------ThreadLocalNode--------------------------------

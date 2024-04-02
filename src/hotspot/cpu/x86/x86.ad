@@ -2725,6 +2725,31 @@ static inline GrowableArray<jvalue>* vreplicate_imm(BasicType bt, T con, int len
   return val;
 }
 
+// FIXME: this is setup for a replicate still. It needs to be changed to emit the full vector.
+static inline GrowableArray<jvalue>* setup_vector_constants(const TypeVect* type, int olen) {
+  BasicType bt = type->element_basic_type();
+  int len = type->length();
+  GrowableArray<jvalue>* val = new GrowableArray<jvalue>(len);
+
+  for (int i = 0; i < olen; i++) {
+    const Type* lane = type->type_at(i);
+
+    jvalue ele;
+    switch (bt) {
+      case T_BYTE:   ele.b = lane->is_int()->get_con(); break;
+      case T_SHORT:  ele.s = lane->is_int()->get_con(); break;
+      case T_INT:    ele.i = lane->is_int()->get_con(); break;
+      case T_LONG:   ele.j = lane->is_long()->get_con(); break;
+      case T_FLOAT:  ele.f = lane->is_float_constant()->getf(); break;
+      case T_DOUBLE: ele.d = lane->is_double_constant()->getd(); break;
+      default: ShouldNotReachHere();
+    }
+    val->append(ele);
+  }
+
+  return val;
+}
+
 static inline jlong high_bit_set(BasicType bt) {
   switch (bt) {
     case T_BYTE:  return 0x8080808080808080;
@@ -4249,6 +4274,26 @@ instruct ReplI_mem(vec dst, memory mem) %{
   %}
   ins_pipe( pipe_slow );
 %}
+
+instruct vectorcon(vec dst) %{
+  match(Set dst (ConV));
+  format %{ "vector_constant $dst" %}
+
+  ins_encode %{
+    // Load value of this constant into the constant table
+    BasicType bt = Matcher::vector_element_basic_type(this);
+
+    InternalAddress addr = $constantaddress(Matcher::vector_element_basic_type(this), setup_vector_constants(this->bottom_type()->is_vect(),
+    (VM_Version::supports_sse3() ? (VM_Version::supports_avx() ? 4 : 8) : 8) /
+                    type2aelembytes(Matcher::vector_element_basic_type(this))
+    ));
+
+    int vlen = Matcher::vector_length_in_bytes(this);
+    __ load_constant_vector(bt, $dst$$XMMRegister, addr, vlen);
+  %}
+  ins_pipe( pipe_slow );
+%}
+
 
 instruct ReplI_imm(vec dst, immI con) %{
   predicate(Matcher::is_non_long_integral_vector(n));

@@ -608,6 +608,7 @@ const Type *AndINode::mul_types( const Type *t0, const Type *t1 ) {
   // If either input is a constant, might be able to trim cases
   if( !r0->is_con() && !r1->is_con() ) {
     if (r1->_lo >= 0) {
+      // TODO: MIN2(r0->_hi, r1->_hi) not quite right
       return TypeInt::make(0, r1->_hi, widen);
     }
 

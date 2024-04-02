@@ -805,11 +805,12 @@ class AndReductionVNode : public UnorderedReductionNode {
 
 //------------------------------OrVNode---------------------------------------
 // Vector or byte, short, int, long as a reduction
-class OrVNode : public VectorNode {
+class OrVNode : public VectorAddNode {
  public:
-  OrVNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  OrVNode(Node* in1, Node* in2, const TypeVect* vt) : VectorAddNode(in1,in2,vt) {}
   virtual int Opcode() const;
   virtual Node* Identity(PhaseGVN* phase);
+  const Type* lane_add_ring(const Type* t1, const Type* t2) const;
 };
 
 //------------------------------OrReductionVNode--------------------------------------
@@ -822,11 +823,12 @@ class OrReductionVNode : public UnorderedReductionNode {
 
 //------------------------------XorVNode---------------------------------------
 // Vector xor integer
-class XorVNode : public VectorNode {
+class XorVNode : public VectorAddNode {
  public:
-  XorVNode(Node* in1, Node* in2, const TypeVect* vt) : VectorNode(in1,in2,vt) {}
+  XorVNode(Node* in1, Node* in2, const TypeVect* vt) : VectorAddNode(in1,in2,vt) {}
   virtual int Opcode() const;
   virtual Node* Ideal(PhaseGVN* phase, bool can_reshape);
+  const Type* lane_add_ring(const Type* t1, const Type* t2) const;
 };
 
 //------------------------------XorReductionVNode--------------------------------------

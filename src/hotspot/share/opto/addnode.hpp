@@ -196,7 +196,8 @@ class OrINode : public AddNode {
 public:
   OrINode( Node *in1, Node *in2 ) : AddNode(in1,in2) {}
   virtual int Opcode() const;
-  virtual const Type *add_ring( const Type *, const Type * ) const;
+  static const Type* add_types(const Type* t1, const Type* t2);
+  virtual const Type* add_ring(const Type* t1, const Type* t2) const { return add_types(t1, t2); };
   virtual const Type *add_id() const { return TypeInt::ZERO; }
   virtual const Type *bottom_type() const { return TypeInt::INT; }
   int max_opcode() const { return Op_MaxI; }
@@ -213,7 +214,8 @@ class OrLNode : public AddNode {
 public:
   OrLNode( Node *in1, Node *in2 ) : AddNode(in1,in2) {}
   virtual int Opcode() const;
-  virtual const Type *add_ring( const Type *, const Type * ) const;
+  static const Type* add_types(const Type* t1, const Type* t2);
+  virtual const Type* add_ring(const Type* t1, const Type* t2) const { return add_types(t1, t2); };
   virtual const Type *add_id() const { return TypeLong::ZERO; }
   virtual const Type *bottom_type() const { return TypeLong::LONG; }
   int max_opcode() const { return Op_MaxL; }
@@ -230,7 +232,8 @@ public:
   XorINode( Node *in1, Node *in2 ) : AddNode(in1,in2) {}
   virtual int Opcode() const;
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
-  virtual const Type *add_ring( const Type *, const Type * ) const;
+  static const Type* add_types(const Type* t1, const Type* t2);
+  virtual const Type* add_ring(const Type* t1, const Type* t2) const { return add_types(t1, t2); };
   virtual const Type *add_id() const { return TypeInt::ZERO; }
   virtual const Type *bottom_type() const { return TypeInt::INT; }
   int max_opcode() const { return Op_MaxI; }
@@ -246,7 +249,8 @@ public:
   XorLNode( Node *in1, Node *in2 ) : AddNode(in1,in2) {}
   virtual int Opcode() const;
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
-  virtual const Type *add_ring( const Type *, const Type * ) const;
+  static const Type* add_types(const Type* t1, const Type* t2);
+  virtual const Type* add_ring(const Type* t1, const Type* t2) const { return add_types(t1, t2); };
   virtual const Type *add_id() const { return TypeLong::ZERO; }
   virtual const Type *bottom_type() const { return TypeLong::LONG; }
   int max_opcode() const { return Op_MaxL; }

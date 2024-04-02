@@ -800,7 +800,7 @@ protected:
 
 public:
   BasicType element_basic_type() const { return _type; }
-  GrowableArray<const Type*> types() const { return _types; }
+  const Type* type_at(int i) const { return _types.at(i); }
 
   uint length() const { return _length; }
   uint length_in_bytes() const {
