@@ -6140,7 +6140,7 @@ instruct cmovI_imm_01(rRegI dst, immI_1 src, rFlagsReg cr, cmpOp cop)
 
 instruct cmovI_reg(rRegI dst, rRegI src, rFlagsReg cr, cmpOp cop)
 %{
-  match(Set dst (CMoveI (Binary cop cr) (Binary dst src)));
+  match(Set dst (CMoveI (Binary cop cr) (Binary src dst)));
 
   ins_cost(200); // XXX
   format %{ "cmovl$cop $dst, $src\t# signed, int" %}
