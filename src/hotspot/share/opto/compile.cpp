@@ -3879,6 +3879,7 @@ void Compile::final_graph_reshaping_main_switch(Node* n, Final_Reshape_Counts& f
       // Due to NaN, == and != can NOT commute!
       if (test._test != BoolTest::eq && test._test != BoolTest::ne && (cmp_1->is_Load() || cmp_1->is_Con()) && !(cmp_2->is_Load() || cmp_2->is_Con())) {
         // TODO: move this to igvn!
+        cmp = cmp->clone();
         cmp->swap_edges(1, 2);
         Node* out = new BoolNode(cmp, bol->_test.commute());
         n->subsume_by(out, this);
