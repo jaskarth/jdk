@@ -11453,7 +11453,6 @@ instruct overflowMulL_rReg_imm(rFlagsReg cr, rRegL op1, immL32 op2, rRegL tmp)
 //----------Control Flow Instructions------------------------------------------
 // Signed compare Instructions
 
-// XXX more variants!!
 instruct compI_rReg(rFlagsReg cr, rRegI op1, rRegI op2)
 %{
   match(Set cr (CmpI op1 op2));
@@ -11470,6 +11469,7 @@ instruct compI_rReg_imm(rFlagsReg cr, rRegI op1, immI op2)
 %{
   match(Set cr (CmpI op1 op2));
 
+  ins_cost(125);
   format %{ "cmpl    $op1, $op2" %}
   ins_encode %{
     __ cmpl($op1$$Register, $op2$$constant);
@@ -11481,12 +11481,35 @@ instruct compI_rReg_mem(rFlagsReg cr, rRegI op1, memory op2)
 %{
   match(Set cr (CmpI op1 (LoadI op2)));
 
-  ins_cost(500); // XXX
+  ins_cost(100); // XXX
   format %{ "cmpl    $op1, $op2" %}
   ins_encode %{
     __ cmpl($op1$$Register, $op2$$Address);
   %}
   ins_pipe(ialu_cr_reg_mem);
+%}
+
+//instruct compI_mem_reg(rFlagsReg cr, memory op1, rRegI op2)
+//%{
+//  match(Set cr (CmpI (LoadI op1) op2));
+//
+//  format %{ "cmpl    $op1, $op2" %}
+//  ins_encode %{
+//    __ cmpl($op1$$Address, $op2$$Register);
+//  %}
+//  ins_pipe(ialu_cr_reg_mem);
+//%}
+
+instruct compI_mem_imm(rFlagsReg cr, memory op1, immI op2)
+%{
+  match(Set cr (CmpI (LoadI op1) op2));
+
+  ins_cost(150);
+  format %{ "cmpl    $op1, $op2" %}
+  ins_encode %{
+    __ cmpl($op1$$Address, $op2$$constant);
+  %}
+  ins_pipe(ialu_cr_reg_imm);
 %}
 
 instruct testI_reg(rFlagsReg cr, rRegI src, immI_0 zero)
@@ -12736,7 +12759,10 @@ instruct tlsLoadP(r15_RegP dst) %{
 //   peepreplace ( leaI_rReg_immI() );
 // %}
 
-// These instructions is not matched by the matcher but used by the peephole
+// These instructions are not matched by the matcher, instead used by peepholes
+
+// lea rules
+
 instruct leaI_rReg_rReg_peep(rRegI dst, rRegI src1, rRegI src2)
 %{
   predicate(false);
@@ -12830,6 +12856,20 @@ instruct leaL_rReg_immI2_peep(rRegL dst, rRegL src, immI2 shift)
   %}
   ins_pipe(ialu_reg_reg);
 %}
+
+// CmpI memory operand rules
+//instruct compI_rReg_mem_peep(rFlagsReg cr, rRegI op1, memory op2)
+//%{
+//  predicate(false);
+//  match(Set cr (CmpI op1 (LoadI op2)));
+//
+//  ins_cost(150);
+//  format %{ "cmpl    $op1, $op2" %}
+//  ins_encode %{
+//    __ cmpl($op1$$Register, $op2$$Address);
+//  %}
+//  ins_pipe(ialu_cr_reg_mem);
+//%}
 
 // These peephole rules replace mov + I pairs (where I is one of {add, inc, dec,
 // sal}) with lea instructions. The {add, sal} rules are beneficial in
@@ -12939,6 +12979,13 @@ peephole
   peepprocedure (test_may_remove);
 %}
 
+// <todo desc>
+//peephole
+//%{
+//  peepmatch (compI_rReg);
+//  peepprodedure (cmp_coalesce);
+//  peepreplace (compI_rReg_mem_peep());
+//%}
 
 //----------SMARTSPILL RULES---------------------------------------------------
 // These must follow all instruction definitions as they use the names

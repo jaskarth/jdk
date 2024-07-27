@@ -3867,26 +3867,26 @@ void Compile::final_graph_reshaping_main_switch(Node* n, Final_Reshape_Counts& f
     }
     break;
   }
-  case Op_Bool: {
-    Node* cmp = n->in(1);
-    if (cmp->is_Cmp()) {
-      Node* cmp_1 = cmp->in(1);
-      Node* cmp_2 = cmp->in(2);
-
-      BoolNode* bol = n->as_Bool();
-      BoolTest test = bol->_test;
-
-      // Due to NaN, == and != can NOT commute!
-      if (test._test != BoolTest::eq && test._test != BoolTest::ne && (cmp_1->is_Load() || cmp_1->is_Con()) && !(cmp_2->is_Load() || cmp_2->is_Con())) {
-        // TODO: move this to igvn!
-        cmp = cmp->clone();
-        cmp->swap_edges(1, 2);
-        Node* out = new BoolNode(cmp, bol->_test.commute());
-        n->subsume_by(out, this);
-      }
-    }
-    break;
-  }
+//  case Op_Bool: {
+//    Node* cmp = n->in(1);
+//    if (cmp->is_Cmp()) {
+//      Node* cmp_1 = cmp->in(1);
+//      Node* cmp_2 = cmp->in(2);
+//
+//      BoolNode* bol = n->as_Bool();
+//      BoolTest test = bol->_test;
+//
+//      // Due to NaN, == and != can NOT commute!
+//      if (test._test != BoolTest::eq && test._test != BoolTest::ne && (cmp_1->is_Load() || cmp_1->is_Con()) && !(cmp_2->is_Load() || cmp_2->is_Con())) {
+//        // TODO: move this to igvn!
+//        cmp = cmp->clone();
+//        cmp->swap_edges(1, 2);
+//        Node* out = new BoolNode(cmp, bol->_test.commute());
+//        n->subsume_by(out, this);
+//      }
+//    }
+//    break;
+//  }
   default:
     assert(!n->is_Call(), "");
     assert(!n->is_Mem(), "");

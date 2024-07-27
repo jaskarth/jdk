@@ -353,7 +353,9 @@ void PhaseChaitin::compact() {
 }
 
 void PhaseChaitin::Register_Allocate() {
-
+  if (C->method() != nullptr) {
+//    tty->print("=========== "); C->method()->print_name(); tty->print_cr(" ===========");
+  }
   // Above the OLD FP (and in registers) are the incoming arguments.  Stack
   // slots in this area are called "arg_slots".  Above the NEW FP (and in
   // registers) is the outgoing argument area; above that is the spill/temp

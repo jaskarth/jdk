@@ -236,6 +236,14 @@ bool Peephole::test_may_remove(Block* block, int block_index, PhaseCFG* cfg_, Ph
   return false;
 }
 
+bool Peephole::cmp_coalesce(Block* block, int block_index, PhaseCFG* cfg_, PhaseRegAlloc* ra_,
+                               MachNode* (*new_root)(), uint inst0_rule) {
+  MachNode* inst0 = block->get_node(block_index)->as_Mach();
+  assert(inst0->rule() == inst0_rule, "sanity");
+
+  return false;
+}
+
 bool Peephole::lea_coalesce_reg(Block* block, int block_index, PhaseCFG* cfg_, PhaseRegAlloc* ra_,
                                 MachNode* (*new_root)(), uint inst0_rule) {
   return lea_coalesce_helper(block, block_index, cfg_, ra_, new_root, inst0_rule, false);

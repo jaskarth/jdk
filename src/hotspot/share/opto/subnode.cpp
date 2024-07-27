@@ -1485,6 +1485,18 @@ static bool is_counted_loop_cmp(Node *cmp) {
          n->in(0)->as_CountedLoop()->phi() == n;
 }
 
+static bool can_cmp_commute(BoolNode* bol, Node* cmp) {
+  BoolTest test = bol->_test;
+
+  // Only handle lt or gt because NaN
+  if (cmp->Opcode() == Op_CmpF || cmp->Opcode() == Op_CmpD) {
+//    return test.is_less();
+    return false;
+  }
+
+  return true;
+}
+
 //------------------------------Ideal------------------------------------------
 Node *BoolNode::Ideal(PhaseGVN *phase, bool can_reshape) {
   // Change "bool tst (cmp con x)" into "bool ~tst (cmp x con)".
@@ -1512,19 +1524,27 @@ Node *BoolNode::Ideal(PhaseGVN *phase, bool can_reshape) {
   // Move constants to the right of compare's to canonicalize.
   // Do not muck with Opaque1 nodes, as this indicates a loop
   // guard that cannot change shape.
-  if (con->is_Con() && !cmp2->is_Con() && cmp2_op != Op_OpaqueZeroTripGuard &&
-      // Because of NaN's, CmpD and CmpF are not commutative
-      cop != Op_CmpD && cop != Op_CmpF &&
+  if ((con->is_Con()) && !(cmp2->is_Con()) && cmp2_op != Op_OpaqueZeroTripGuard &&
+      // Guard against floating point comparisons
+      can_cmp_commute(this, cmp) &&
       // Protect against swapping inputs to a compare when it is used by a
       // counted loop exit, which requires maintaining the loop-limit as in(2)
       !is_counted_loop_exit_test() ) {
-    // Ok, commute the constant to the right of the cmp node.
-    // Clone the Node, getting a new Node of the same class
-    cmp = cmp->clone();
-    // Swap inputs to the clone
-    cmp->swap_edges(1, 2);
-    cmp = phase->transform( cmp );
-    return new BoolNode( cmp, _test.commute() );
+    if (phase->is_IterGVN()) {
+      if (cmp->Opcode() == Op_CmpF) {
+//        phase->C->method()->print_name();
+//        tty->print_cr(" %d", cmp->_idx);
+      }
+      // Ok, commute the constant to the right of the cmp node.
+      // Clone the Node, getting a new Node of the same class
+      cmp = cmp->clone();
+      // Swap inputs to the clone
+      cmp->swap_edges(1, 2);
+      cmp = phase->transform(cmp);
+      return new BoolNode(cmp, _test.commute());
+    } else {
+      phase->record_for_igvn(this);
+    }
   }
 
   // Change "bool eq/ne (cmp (cmove (bool tst (cmp2)) 1 0) 0)" into "bool tst/~tst (cmp2)"

@@ -28,7 +28,7 @@
  *
  * @run main/othervm -Xbatch -Xcomp
  *    -XX:CompileCommand=compileonly,compiler.c2.Test6973329::*
- *    compiler.c2.Test6973329
+ *    compiler.c2.Test6973329 -XX:PrintIdealGraphLevel=3
  */
 
 package compiler.c2;

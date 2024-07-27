@@ -289,28 +289,29 @@ int PhaseChaitin::split_USE(MachSpillCopyNode::SpillType spill_type, Node *def, 
 
 //------------------------------clone_node----------------------------
 // Clone node with anti dependence check.
-static Node* clone_node(Node* def, Block *b, Compile* C) {
-  if (def->needs_anti_dependence_check()) {
-#ifdef ASSERT
-    if (PrintOpto && WizardMode) {
-      tty->print_cr("RA attempts to clone node with anti_dependence:");
-      def->dump(-1); tty->cr();
-      tty->print_cr("into block:");
-      b->dump();
-    }
-#endif
-    if (C->subsume_loads() == true && !C->failing()) {
-      // Retry with subsume_loads == false
-      // If this is the first failure, the sentinel string will "stick"
-      // to the Compile object, and the C2Compiler will see it and retry.
-      C->record_failure(C2Compiler::retry_no_subsuming_loads());
-    } else {
-      // Bailout without retry
-      assert(false, "RA Split failed: attempt to clone node with anti_dependence");
-      C->record_method_not_compilable("RA Split failed: attempt to clone node with anti_dependence");
-    }
-    return 0;
-  }
+static Node* clone_node(Node* def, Block *b, Compile* C, int kind) {
+  // FIXME: !!!!
+//  if (def->needs_anti_dependence_check()) {
+//#ifdef ASSERT
+//    if (PrintOpto && WizardMode) {
+//      tty->print_cr("RA attempts to clone node with anti_dependence (kind %d):", kind);
+//      def->dump(-1); tty->cr();
+//      tty->print_cr("into block:");
+//      b->dump();
+//    }
+//#endif
+//    if (C->subsume_loads() == true && !C->failing()) {
+//      // Retry with subsume_loads == false
+//      // If this is the first failure, the sentinel string will "stick"
+//      // to the Compile object, and the C2Compiler will see it and retry.
+//      C->record_failure(C2Compiler::retry_no_subsuming_loads());
+//    } else {
+//      // Bailout without retry
+//      assert(false, "RA Split failed: attempt to clone node with anti_dependence");
+//      C->record_method_not_compilable("RA Split failed: attempt to clone node with anti_dependence");
+//    }
+//    return 0;
+//  }
   return def->clone();
 }
 
@@ -363,8 +364,9 @@ Node *PhaseChaitin::split_Rematerialize(Node *def, Block *b, uint insidx, uint &
     }
   }
 
-  Node *spill = clone_node(def, b, C);
+  Node *spill = clone_node(def, b, C, 1);
   if (spill == nullptr || C->check_node_count(NodeLimitFudgeFactor, out_of_nodes)) {
+    tty->print_cr("~~~~~~~~ split_rematerialize: %d", walkThru);
     // Check when generating nodes
     return 0;
   }
@@ -524,6 +526,7 @@ uint PhaseChaitin::Split(uint maxlrg, ResourceArea* split_arena) {
       assert(!lrgs(bidx).mask().is_AllStack(),"AllStack should color");
       lrg2reach[bidx] = spill_cnt;
       spill_cnt++;
+//      tty->print_cr("bidx %d, reg %d", bidx, lrgs(bidx).reg());
       lidxs.append(bidx);
 #ifdef ASSERT
       // Initialize the split counts to zero
@@ -936,7 +939,7 @@ uint PhaseChaitin::Split(uint maxlrg, ResourceArea* split_arena) {
               // The effect of this clone is to drop the node out of the block,
               // so that the allocator does not see it anymore, and therefore
               // does not attempt to assign it a register.
-              def = clone_node(def, b, C);
+              def = clone_node(def, b, C, 2);
               if (def == nullptr || C->check_node_count(NodeLimitFudgeFactor, out_of_nodes)) {
                 return 0;
               }
