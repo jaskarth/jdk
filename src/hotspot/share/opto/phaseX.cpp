@@ -2269,6 +2269,58 @@ void PhasePeephole::print_statistics() {
 }
 #endif
 
+Node* PhaseLowering::transform(Node* n) {
+  _igvn->hash_delete(n);
+  // New node, make space for it in the type table
+  _igvn->ensure_type_or_null(n);
+
+  // Try to find an existing version of the same node
+  Node* existing = _igvn->hash_find_insert(n);
+  if (existing != nullptr) {
+    // GVN hit, destroy the node we just made
+    n->destruct(_igvn);
+    return existing;
+  }
+
+  // FIXME: can't always trust this??
+//  assert(_igvn->type_or_null(n) == nullptr, "Shouldn't have a type yet!");
+
+  // Get new type and
+  const Type* type = n->Value(_igvn);
+  _igvn->set_type(n, type);
+  n->raise_bottom_type(type);
+
+  _igvn->add_users_to_worklist(n);
+
+  return n;
+}
+
+
+void PhaseLowering::lower() {
+  // Worklist should be empty before lowering
+  _igvn->_worklist.ensure_empty();
+
+  // Add all useful nodes to worklist
+  C->identify_useful_nodes(_igvn->_worklist);
+
+  uint loop_count = 0;
+
+  while(_igvn->_worklist.size() != 0) {
+    // Take one node off the worklist and try to lower it
+    Node* n = _igvn->_worklist.pop();
+    Node* new_node = lower_node(n);
+
+    // If a non-null node is returned, replace all usages
+    if (new_node != nullptr) {
+      new_node = transform(new_node);
+
+      _igvn->replace_node(n, new_node);
+    }
+  }
+
+  // Worklist should be empty after lowering
+  _igvn->_worklist.ensure_empty();
+}
 
 //=============================================================================
 //------------------------------set_req_X--------------------------------------

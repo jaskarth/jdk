@@ -698,4 +698,21 @@ public:
 #endif
 };
 
+class PhaseLowering : public PhaseTransform {
+  PhaseIterGVN* _igvn;
+public:
+  PhaseLowering(PhaseIterGVN* igvn) : PhaseTransform(Lower), _igvn(igvn) {};
+
+  //
+  virtual Node* transform(Node* n);
+
+  Node* lower_node(Node* in);
+
+  void lower();
+
+  inline PhaseIterGVN* igvn() {
+    return _igvn;
+  }
+};
+
 #endif // SHARE_OPTO_PHASEX_HPP

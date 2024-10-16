@@ -190,6 +190,10 @@ bool Peephole::test_may_remove(Block* block, int block_index, PhaseCFG* cfg_, Ph
       juint all_node_flags = prevNode->flags();
       if (all_node_flags == 0) {
         // We can return early - there is no way the test can be removed, the preceding node does not set any flags
+        if (UseNewCode) {
+          tty->print("Killed Node 1: ");
+          prevNode->dump_name();
+        }
         return false;
       }
       juint required_flags = 0;
@@ -209,8 +213,17 @@ bool Peephole::test_may_remove(Block* block, int block_index, PhaseCFG* cfg_, Ph
         }
         if (!found_correct_oper) {
           // We could not find one the required flags for one of the dependencies. Keep the test as it might set flags needed for that node
+          if (UseNewCode) {
+            tty->print("Killed Node: ");
+            prevNode->dump_name();
+          }
           return false;
         }
+      }
+      if (UseNewCode) {
+        tty->print("Node: ");
+        prevNode->dump_name();
+        tty->print_cr(" flags: %d --- %d", required_flags, all_node_flags);
       }
       assert(required_flags != 0, "No flags required, should be impossible!");
       bool sets_all_required_flags = (required_flags & ~all_node_flags) == 0;
