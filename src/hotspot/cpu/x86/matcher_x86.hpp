@@ -261,6 +261,25 @@
     }
   }
 
+  static bool is_vector_cast_supported(BasicType from_bt, BasicType to_bt) {
+    // Vector casts are only supported on AVX1 and higher
+    if (UseAVX == 0) {
+      return false;
+    }
+
+    switch (from_bt) {
+      case T_INT: {
+        return to_bt == T_SHORT || to_bt == T_BYTE;
+      }
+      case T_SHORT: {
+        return to_bt == T_BYTE;
+      }
+      default: {
+        return false;
+      }
+    }
+  }
+
   // Is SIMD sort supported for this CPU?
   static bool supports_simd_sort(BasicType bt) {
     if (VM_Version::supports_avx512dq()) {
