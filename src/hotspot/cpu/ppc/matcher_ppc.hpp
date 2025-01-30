@@ -46,11 +46,6 @@
   // Whether code generation need accurate ConvI2L types.
   static const bool convi2l_type_required = true;
 
-  // Do we need to mask the count passed to shift instructions or does
-  // the cpu only look at the lower 5/6 bits anyway?
-  // PowerPC requires masked shift counts.
-  static const bool need_masked_shift_count = true;
-
   // Power6 requires postalloc expand (see block.cpp for description of postalloc expand).
   static const bool require_postalloc_expand = true;
 

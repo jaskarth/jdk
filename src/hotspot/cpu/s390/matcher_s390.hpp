@@ -47,11 +47,6 @@
   // Whether code generation need accurate ConvI2L types.
   static const bool convi2l_type_required = true;
 
-  // Do the processor's shift instructions only use the low 5/6 bits
-  // of the count for 32/64 bit ints? If not we need to do the masking
-  // ourselves.
-  static const bool need_masked_shift_count = false;
-
   // Does the CPU require late expand (see block.cpp for description of late expand)?
   static const bool require_postalloc_expand = false;
 

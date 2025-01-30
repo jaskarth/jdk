@@ -45,11 +45,6 @@
   // Whether code generation need accurate ConvI2L types.
   static const bool convi2l_type_required = true;
 
-  // Do we need to mask the count passed to shift instructions or does
-  // the cpu only look at the lower 5/6 bits anyway?
-  // FIXME: does this handle vector shifts as well?
-  static const bool need_masked_shift_count = true;
-
   // Does the CPU require late expand (see block.cpp for description of late expand)?
   static const bool require_postalloc_expand = false;
 

@@ -32,6 +32,7 @@
 #include "opto/callnode.hpp"
 #include "opto/castnode.hpp"
 #include "opto/cfgnode.hpp"
+#include "opto/divnode.hpp"
 #include "opto/idealGraphPrinter.hpp"
 #include "opto/loopnode.hpp"
 #include "opto/machnode.hpp"
@@ -2307,13 +2308,6 @@ Node* PhaseLowering::apply_ideal(Node* k, bool can_reshape) {
 
 Node* PhaseLowering::apply_identity(Node* k) {
   return k;
-}
-
-Node* PhaseLowering::lower_node(Node* n) {
-  // Apply shared lowering transforms
-
-  // Apply backend-specific lowering transforms
-  return lower_node_platform(n);
 }
 
 void PhaseLowering::lower() {

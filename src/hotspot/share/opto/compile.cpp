@@ -3603,22 +3603,6 @@ void Compile::final_graph_reshaping_main_switch(Node* n, Final_Reshape_Counts& f
 
 #endif
 
-  case Op_ModI:
-    handle_div_mod_op(n, T_INT, false);
-    break;
-
-  case Op_ModL:
-    handle_div_mod_op(n, T_LONG, false);
-    break;
-
-  case Op_UModI:
-    handle_div_mod_op(n, T_INT, true);
-    break;
-
-  case Op_UModL:
-    handle_div_mod_op(n, T_LONG, true);
-    break;
-
   case Op_LoadVector:
   case Op_StoreVector:
 #ifdef ASSERT
@@ -3694,34 +3678,6 @@ void Compile::final_graph_reshaping_main_switch(Node* n, Final_Reshape_Counts& f
     }
     n->as_Loop()->verify_strip_mined(0);
     break;
-  case Op_LShiftI:
-  case Op_RShiftI:
-  case Op_URShiftI:
-  case Op_LShiftL:
-  case Op_RShiftL:
-  case Op_URShiftL:
-    if (Matcher::need_masked_shift_count) {
-      // The cpu's shift instructions don't restrict the count to the
-      // lower 5/6 bits. We need to do the masking ourselves.
-      Node* in2 = n->in(2);
-      juint mask = (n->bottom_type() == TypeInt::INT) ? (BitsPerInt - 1) : (BitsPerLong - 1);
-      const TypeInt* t = in2->find_int_type();
-      if (t != nullptr && t->is_con()) {
-        juint shift = t->get_con();
-        if (shift > mask) { // Unsigned cmp
-          n->set_req(2, ConNode::make(TypeInt::make(shift & mask)));
-        }
-      } else {
-        if (t == nullptr || t->_lo < 0 || t->_hi > (int)mask) {
-          Node* shift = new AndINode(in2, ConNode::make(TypeInt::make(mask)));
-          n->set_req(2, shift);
-        }
-      }
-      if (in2->outcnt() == 0) { // Remove dead node
-        in2->disconnect_inputs(this);
-      }
-    }
-    break;
   case Op_MemBarStoreStore:
   case Op_MemBarRelease:
     // Break the link with AllocateNode: it is no longer useful and
@@ -3784,19 +3740,6 @@ void Compile::final_graph_reshaping_main_switch(Node* n, Final_Reshape_Counts& f
           k->subsume_by(m, this);
         }
       }
-    }
-    break;
-  }
-  case Op_CmpUL: {
-    if (!Matcher::has_match_rule(Op_CmpUL)) {
-      // No support for unsigned long comparisons
-      ConINode* sign_pos = new ConINode(TypeInt::make(BitsPerLong - 1));
-      Node* sign_bit_mask = new RShiftLNode(n->in(1), sign_pos);
-      Node* orl = new OrLNode(n->in(1), sign_bit_mask);
-      ConLNode* remove_sign_mask = new ConLNode(TypeLong::make(max_jlong));
-      Node* andl = new AndLNode(orl, remove_sign_mask);
-      Node* cmp = new CmpLNode(andl, n->in(2));
-      n->subsume_by(cmp, this);
     }
     break;
   }

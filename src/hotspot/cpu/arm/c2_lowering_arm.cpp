@@ -28,6 +28,16 @@
 #include "opto/phaseX.hpp"
 
 Node* PhaseLowering::lower_node_platform(Node* n) {
+  switch (n->Opcode()) {
+  case Op_LShiftI:
+  case Op_RShiftI:
+  case Op_URShiftI:
+  case Op_LShiftL:
+  case Op_RShiftL:
+  case Op_URShiftL:
+    return lower_node_platform(n);
+  }
+
   return nullptr;
 }
 

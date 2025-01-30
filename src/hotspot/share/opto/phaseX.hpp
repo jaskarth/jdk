@@ -720,6 +720,10 @@ public:
 
   // Main function to lower all nodes in the graph.
   void lower();
+
+  // Helper functions
+
+  static Node* mask_shifted_count(Node* n);
 };
 
 #endif // SHARE_OPTO_PHASEX_HPP
