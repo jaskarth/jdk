@@ -992,6 +992,20 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
     }
   }
 
+  int in1_op = in(1)->Opcode();
+
+  // Check for ((x>>>a)>>>b) and replace with (x>>>(a+b)) when a+b < 32
+  if( in1_op == Op_LShiftI ) {
+    const TypeInt *t12 = phase->type( in(1)->in(2) )->isa_int();
+    if( t12 && t12->is_con() ) { // Right input is a constant
+      assert( in(1) != in(1)->in(1), "dead loop in LShiftINode::Ideal" );
+      const int con2 = t12->get_con() & 31; // Shift count is always masked
+      const int con3 = con+con2;
+      if( con3 < 32 )           // Only merge shifts if total is < 32
+        return new LShiftINode( in(1)->in(1), phase->intcon(con3) );
+    }
+  }
+
   // Check for "(x >> C1) << C2"
   if (add1_op == Op_RShiftI || add1_op == Op_URShiftI) {
     int add1Con = 0;
@@ -1335,6 +1349,20 @@ Node *RShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
   int shift = maskShiftAmount(phase, this, BitsPerJavaInteger);
   if (shift == 0) {
     return nullptr;
+  }
+
+  int in1_op = in(1)->Opcode();
+
+  // Check for ((x>>>a)>>>b) and replace with (x>>>(a+b)) when a+b < 32
+  if( in1_op == Op_RShiftI ) {
+    const TypeInt *t12 = phase->type( in(1)->in(2) )->isa_int();
+    if( t12 && t12->is_con() ) { // Right input is a constant
+      assert( in(1) != in(1)->in(1), "dead loop in RShiftINode::Ideal" );
+      const int con2 = t12->get_con() & 31; // Shift count is always masked
+      const int con3 = shift+con2;
+      if( con3 < 32 )           // Only merge shifts if total is < 32
+        return new RShiftINode( in(1)->in(1), phase->intcon(con3) );
+    }
   }
 
   // Check for (x & 0xFF000000) >> 24, whose mask can be made smaller.
