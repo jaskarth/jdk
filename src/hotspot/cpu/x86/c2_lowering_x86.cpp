@@ -32,6 +32,6 @@ Node* PhaseLowering::lower_node_platform(Node* n) {
 }
 
 bool PhaseLowering::should_lower() {
-  return false;
+  return true;
 }
 #endif // COMPILER2
