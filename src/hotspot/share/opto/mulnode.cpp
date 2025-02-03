@@ -945,6 +945,33 @@ static int maskShiftAmount(PhaseGVN* phase, Node* shiftNode, int nBits) {
   return 0;
 }
 
+template<typename ShiftNode>
+static ShiftNode* constant_fold_shift(PhaseGVN* phase, ShiftNode* root, BasicType type) {
+  assert(type == T_INT || type == T_LONG, "Expected either int or long");
+
+  // Find the pattern (Shift (Shift ... con1) con2)
+  if (root->in(1)->Opcode() == root->Opcode()) {
+    const TypeInt* con1 = phase->type(root->in(2))->isa_int();
+    const TypeInt* con2 = phase->type(root->in(1)->in(2))->isa_int();
+
+    if (con1 != nullptr && con2 != nullptr && con1->is_con() && con2->is_con()) {
+      int res = con1->get_con() + con2->get_con();
+      int max = type == T_INT ? BitsPerJavaInteger : BitsPerJavaLong;
+
+      if (res < max) {
+        // 
+        if (phase->is_IterGVN()) {
+          return new ShiftNode(root->in(1)->in(1), phase->intcon(res));
+        } else {
+          phase->record_for_igvn(root);
+        }
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 //------------------------------Identity---------------------------------------
 Node* LShiftINode::Identity(PhaseGVN* phase) {
   int count = 0;
@@ -994,16 +1021,9 @@ Node *LShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
   int in1_op = in(1)->Opcode();
 
-  // Check for ((x>>>a)>>>b) and replace with (x>>>(a+b)) when a+b < 32
-  if( in1_op == Op_LShiftI ) {
-    const TypeInt *t12 = phase->type( in(1)->in(2) )->isa_int();
-    if( t12 && t12->is_con() ) { // Right input is a constant
-      assert( in(1) != in(1)->in(1), "dead loop in LShiftINode::Ideal" );
-      const int con2 = t12->get_con() & 31; // Shift count is always masked
-      const int con3 = con+con2;
-      if( con3 < 32 )           // Only merge shifts if total is < 32
-        return new LShiftINode( in(1)->in(1), phase->intcon(con3) );
-    }
+  Node* constant_fold = constant_fold_shift<>(phase, this, T_INT);
+  if (constant_fold != nullptr) {
+    return constant_fold;
   }
 
   // Check for "(x >> C1) << C2"
@@ -1182,6 +1202,11 @@ Node *LShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
     }
   }
 
+  Node* constant_fold = constant_fold_shift<>(phase, this, T_LONG);
+  if (constant_fold != nullptr) {
+    return constant_fold;
+  }
+
   // Check for "(x >> C1) << C2"
   if (add1_op == Op_RShiftL || add1_op == Op_URShiftL) {
     int add1Con = 0;
@@ -1351,18 +1376,9 @@ Node *RShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
     return nullptr;
   }
 
-  int in1_op = in(1)->Opcode();
-
-  // Check for ((x>>>a)>>>b) and replace with (x>>>(a+b)) when a+b < 32
-  if( in1_op == Op_RShiftI ) {
-    const TypeInt *t12 = phase->type( in(1)->in(2) )->isa_int();
-    if( t12 && t12->is_con() ) { // Right input is a constant
-      assert( in(1) != in(1)->in(1), "dead loop in RShiftINode::Ideal" );
-      const int con2 = t12->get_con() & 31; // Shift count is always masked
-      const int con3 = shift+con2;
-      if( con3 < 32 )           // Only merge shifts if total is < 32
-        return new RShiftINode( in(1)->in(1), phase->intcon(con3) );
-    }
+  Node* constant_fold = constant_fold_shift<>(phase, this, T_INT);
+  if (constant_fold != nullptr) {
+    return constant_fold;
   }
 
   // Check for (x & 0xFF000000) >> 24, whose mask can be made smaller.
@@ -1597,16 +1613,9 @@ Node *URShiftINode::Ideal(PhaseGVN *phase, bool can_reshape) {
 
   int in1_op = in(1)->Opcode();
 
-  // Check for ((x>>>a)>>>b) and replace with (x>>>(a+b)) when a+b < 32
-  if( in1_op == Op_URShiftI ) {
-    const TypeInt *t12 = phase->type( in(1)->in(2) )->isa_int();
-    if( t12 && t12->is_con() ) { // Right input is a constant
-      assert( in(1) != in(1)->in(1), "dead loop in URShiftINode::Ideal" );
-      const int con2 = t12->get_con() & 31; // Shift count is always masked
-      const int con3 = con+con2;
-      if( con3 < 32 )           // Only merge shifts if total is < 32
-        return new URShiftINode( in(1)->in(1), phase->intcon(con3) );
-    }
+  Node* constant_fold = constant_fold_shift<>(phase, this, T_INT);
+  if (constant_fold != nullptr) {
+    return constant_fold;
   }
 
   // Check for ((x << z) + Y) >>> z.  Replace with x + con>>>z
@@ -1794,6 +1803,11 @@ Node *URShiftLNode::Ideal(PhaseGVN *phase, bool can_reshape) {
   if( shl->Opcode() == Op_LShiftL &&
       phase->type(shl->in(2)) == t2 )
     return new AndLNode( shl->in(1), phase->longcon(mask) );
+
+  Node* constant_fold = constant_fold_shift<>(phase, this, T_LONG);
+  if (constant_fold != nullptr) {
+    return constant_fold;
+  }
 
   // Check for (x >> n) >>> 63. Replace with (x >>> 63)
   Node *shr = in(1);
