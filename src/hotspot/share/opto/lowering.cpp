@@ -22,6 +22,7 @@
  *
  */
 
+#include "precompiled.hpp"
 #include "opto/node.hpp"
 #include "opto/addnode.hpp"
 #include "opto/connode.hpp"

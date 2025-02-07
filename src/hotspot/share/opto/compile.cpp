@@ -3142,37 +3142,6 @@ void Compile::final_graph_reshaping_impl(Node *n, Final_Reshape_Counts& frc, Uni
   }
 }
 
-void Compile::handle_div_mod_op(Node* n, BasicType bt, bool is_unsigned) {
-  if (!UseDivMod) {
-    return;
-  }
-
-  // Check if "a % b" and "a / b" both exist
-  Node* d = n->find_similar(Op_DivIL(bt, is_unsigned));
-  if (d == nullptr) {
-    return;
-  }
-
-  // Replace them with a fused divmod if supported
-  if (Matcher::has_match_rule(Op_DivModIL(bt, is_unsigned))) {
-    DivModNode* divmod = DivModNode::make(n, bt, is_unsigned);
-    // If the divisor input for a Div (or Mod etc.) is not zero, then the control input of the Div is set to zero.
-    // It could be that the divisor input is found not zero because its type is narrowed down by a CastII in the
-    // subgraph for that input. Range check CastIIs are removed during final graph reshape. To preserve the dependency
-    // carried by a CastII, precedence edges are added to the Div node. We need to transfer the precedence edges to the
-    // DivMod node so the dependency is not lost.
-    divmod->add_prec_from(n);
-    divmod->add_prec_from(d);
-    d->subsume_by(divmod->div_proj(), this);
-    n->subsume_by(divmod->mod_proj(), this);
-  } else {
-    // Replace "a % b" with "a - ((a / b) * b)"
-    Node* mult = MulNode::make(d, d->in(2), bt);
-    Node* sub = SubNode::make(d->in(1), mult, bt);
-    n->subsume_by(sub, this);
-  }
-}
-
 void Compile::final_graph_reshaping_main_switch(Node* n, Final_Reshape_Counts& frc, uint nop, Unique_Node_List& dead_nodes) {
   switch( nop ) {
   // Count all float operations that may use FPU
