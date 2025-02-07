@@ -31,7 +31,7 @@
 #include "opto/matcher.hpp"
 #include "opto/phaseX.hpp"
 
-Node* handle_div_mod_op(Node* n, BasicType bt, bool is_unsigned) {
+static Node* handle_div_mod_op(PhaseLowering* phase, Node* n, BasicType bt, bool is_unsigned) {
   if (!UseDivMod) {
     assert(false, "should not reach");
   }
@@ -52,7 +52,12 @@ Node* handle_div_mod_op(Node* n, BasicType bt, bool is_unsigned) {
     // DivMod node so the dependency is not lost.
     divmod->add_prec_from(n);
     divmod->add_prec_from(d);
-    d->subsume_by(divmod->div_proj(), Compile::current());
+
+    phase->register_new_node_with_optimizer(divmod);
+    phase->register_new_node_with_optimizer(divmod->div_proj());
+
+    phase->replace_node(d, divmod->div_proj());
+
     return divmod->mod_proj();
   } else {
     // Replace "a % b" with "a - ((a / b) * b)"
@@ -68,20 +73,16 @@ Node* PhaseLowering::lower_node(Node* n) {
   if (UseDivMod) {
     switch (n->Opcode()) {
       case Op_ModI:
-        handle_div_mod_op(n, T_INT, false);
-        break;
+        return handle_div_mod_op(this, n, T_INT, false);
 
       case Op_ModL:
-        handle_div_mod_op(n, T_LONG, false);
-        break;
+        return handle_div_mod_op(this, n, T_LONG, false);
 
       case Op_UModI:
-        handle_div_mod_op(n, T_INT, true);
-        break;
+        return handle_div_mod_op(this, n, T_INT, true);
 
       case Op_UModL:
-        handle_div_mod_op(n, T_LONG, true);
-        break;
+        return handle_div_mod_op(this, n, T_LONG, true);
     }
   }
 
