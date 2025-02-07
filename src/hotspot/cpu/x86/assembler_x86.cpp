@@ -1752,6 +1752,13 @@ void Assembler::andnl(Register dst, Register src1, Address src2) {
   emit_operand(dst, src2, 0);
 }
 
+void Assembler::bextrl(Register dst, Register src, Register control) {
+  assert(VM_Version::supports_bmi1(), "bit manipulation instructions not supported");
+  InstructionAttr attributes(AVX_128bit, /* rex_w */ false, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ false);
+  int encode = vex_prefix_and_encode(dst->encoding(), src->encoding(), control->encoding(), VEX_SIMD_NONE, VEX_OPCODE_0F_38, &attributes, true);
+  emit_int16((unsigned char)0xF7, (0xC0 | encode));
+}
+
 void Assembler::bsfl(Register dst, Register src) {
   int encode = prefix_and_encode(dst->encoding(), src->encoding(), true /* is_map1 */);
   emit_opcode_prefix_and_encoding((unsigned char)0xBC, 0xC0, encode);

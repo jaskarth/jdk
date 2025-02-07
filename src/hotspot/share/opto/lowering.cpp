@@ -45,7 +45,7 @@ static Node* handle_div_mod_op(PhaseLowering* phase, Node* n, BasicType bt, bool
 
   // Replace them with a fused divmod if supported
   if (Matcher::has_match_rule(Op_DivModIL(bt, is_unsigned))) {
-    DivModNode* divmod = DivModNode::make(n, bt, is_unsigned);
+    DivModNode* divmod = (DivModNode*) phase->transform(DivModNode::make(n, bt, is_unsigned));
     // If the divisor input for a Div (or Mod etc.) is not zero, then the control input of the Div is set to zero.
     // It could be that the divisor input is found not zero because its type is narrowed down by a CastII in the
     // subgraph for that input. Range check CastIIs are removed during final graph reshape. To preserve the dependency
@@ -54,10 +54,7 @@ static Node* handle_div_mod_op(PhaseLowering* phase, Node* n, BasicType bt, bool
     divmod->add_prec_from(n);
     divmod->add_prec_from(d);
 
-    phase->transform(divmod);
-    phase->transform(divmod->div_proj());
-
-    phase->replace_node(d, divmod->div_proj());
+    phase->replace_node(d, phase->transform(divmod->div_proj()));
 
     return divmod->mod_proj();
   } else {
@@ -70,6 +67,8 @@ static Node* handle_div_mod_op(PhaseLowering* phase, Node* n, BasicType bt, bool
 
 Node* PhaseLowering::lower_node(Node* n) {
   // Apply shared lowering transforms
+
+  // (1) DivMod
 
   if (UseDivMod) {
     switch (n->Opcode()) {
@@ -87,6 +86,8 @@ Node* PhaseLowering::lower_node(Node* n) {
     }
   }
 
+  // (2) CmpUL expansion
+
   if (n->Opcode() == Op_CmpUL && !Matcher::has_match_rule(Op_CmpUL)) {
     // No support for unsigned long comparisons
     Node* sign_pos = intcon(BitsPerLong - 1);
@@ -97,6 +98,10 @@ Node* PhaseLowering::lower_node(Node* n) {
     Node* cmp = transform(new CmpLNode(andl, n->in(2)));
     return cmp;
   }
+
+  // (3) mask_shifted_count for ppc and arm32 (called from platform lowering)
+
+  // (4) New: x86 bextr instruction (implemented in c2_lowering_x86.cpp)
 
   // Apply backend-specific lowering transforms
   return lower_node_platform(n);

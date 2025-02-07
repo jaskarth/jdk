@@ -35,6 +35,7 @@
 #include "opto/intrinsicnode.hpp"
 #include "opto/locknode.hpp"
 #include "opto/loopnode.hpp"
+#include "opto/lowerednode.hpp"
 #include "opto/machnode.hpp"
 #include "opto/memnode.hpp"
 #include "opto/mathexactnode.hpp"

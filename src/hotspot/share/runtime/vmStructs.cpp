@@ -127,6 +127,7 @@
 #include "opto/intrinsicnode.hpp"
 #include "opto/locknode.hpp"
 #include "opto/loopnode.hpp"
+#include "opto/lowerednode.hpp"
 #include "opto/machnode.hpp"
 #include "opto/matcher.hpp"
 #include "opto/mathexactnode.hpp"
@@ -1821,6 +1822,7 @@
   declare_c2_type(VectorBoxNode, Node)                                    \
   declare_c2_type(VectorBoxAllocateNode, CallStaticJavaNode)              \
   declare_c2_type(VectorTestNode, CmpNode)                                \
+  declare_c2_type(BextrNode, Node)                                        \
                                                                           \
   /*********************/                                                 \
   /* Adapter Blob Entries */                                              \

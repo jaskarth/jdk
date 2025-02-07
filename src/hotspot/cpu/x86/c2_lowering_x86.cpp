@@ -25,9 +25,38 @@
 #include "precompiled.hpp"
 #ifdef COMPILER2
 #include "opto/node.hpp"
+#include "opto/lowerednode.hpp"
 #include "opto/phaseX.hpp"
 
 Node* PhaseLowering::lower_node_platform(Node* n) {
+  int opc = n->Opcode();
+  if (opc == Op_AndI && UseBMI1Instructions) {
+    // Look for (AndI (U/RShiftI ... shift) mask) where mask is a power of two minus one
+
+    const TypeInt* mask_type = type(n->in(2))->isa_int();
+
+    // Check for U/RShiftI and that 'mask' is a con
+    if ((n->in(1)->Opcode() == Op_URShiftI || n->in(1)->Opcode() == Op_RShiftI) && mask_type != nullptr && mask_type->is_con()) {
+      const TypeInt* shift_type = type(n->in(1)->in(2))->isa_int();
+
+      // Check that 'shift' is a con
+      if (shift_type != nullptr && shift_type->is_con()) {
+        // Make sure that 'mask' is a power of two minus 1
+        if (is_power_of_2(mask_type->get_con() + 1)) {
+          int and_value = exact_log2(mask_type->get_con() + 1);
+          int shift_value = shift_type->get_con();
+
+          // Encode the constant for the bextr
+          int bextr_imm = and_value << 8 | shift_value;
+
+          return new BextrNode(n->in(1)->in(1), intcon(bextr_imm));
+        }
+      }
+    }
+  }
+
+  // TODO: bextr also works for the (less common) pattern (URShiftI (AndI ... mask) shift) where mask == 2^shift
+
   return nullptr;
 }
 

@@ -9068,6 +9068,24 @@ instruct blsrI_rReg_mem(rRegI dst, memory src, immI_M1 minus_1, rFlagsReg cr)
   ins_pipe(ialu_reg);
 %}
 
+// Bextr
+instruct bextrI_rReg(rRegI dst, rRegI src, rRegI control, rFlagsReg cr)
+%{
+  match(Set dst (Bextr src control));
+  predicate(UseBMI1Instructions);
+  effect(KILL cr);
+  flag(PD::Flag_sets_zero_flag, PD::Flag_clears_overflow_flag, PD::Flag_clears_carry_flag);
+
+  ins_cost(125);
+  format %{ "bextrl $dst, $src, $control\t# bit extract" %}
+
+  ins_encode %{
+    __ bextrl($dst$$Register, $src$$Register, $control$$Register);
+  %}
+
+  ins_pipe(ialu_reg);
+%}
+
 // Or Instructions
 // Or Register with Register
 instruct orI_rReg(rRegI dst, rRegI src, rFlagsReg cr)

@@ -1185,6 +1185,8 @@ private:
   void andnq(Register dst, Register src1, Register src2);
   void andnq(Register dst, Register src1, Address src2);
 
+  void bextrl(Register dst, Register src, Register control);
+
   void blsil(Register dst, Register src);
   void blsil(Register dst, Address src);
   void blsiq(Register dst, Register src);
