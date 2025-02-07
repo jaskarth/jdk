@@ -35,7 +35,7 @@ Node* PhaseLowering::lower_node_platform(Node* n) {
   case Op_LShiftL:
   case Op_RShiftL:
   case Op_URShiftL:
-    return lower_node_platform(n);
+    return mask_shifted_count(n);
   }
 
   return nullptr;
