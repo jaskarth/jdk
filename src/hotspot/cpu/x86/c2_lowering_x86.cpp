@@ -31,12 +31,12 @@
 Node* PhaseLowering::lower_node_platform(Node* n) {
   int opc = n->Opcode();
   if (opc == Op_AndI && UseBMI1Instructions) {
-    // Look for (AndI (U/RShiftI ... shift) mask) where mask is a power of two minus one
+    // Look for (AndI (URShiftI ... shift) mask) where mask is a power of two minus one
 
     const TypeInt* mask_type = type(n->in(2))->isa_int();
 
-    // Check for U/RShiftI and that 'mask' is a con
-    if ((n->in(1)->Opcode() == Op_URShiftI || n->in(1)->Opcode() == Op_RShiftI) && mask_type != nullptr && mask_type->is_con()) {
+    // Check for URShiftI and that 'mask' is a con
+    if (n->in(1)->Opcode() == Op_URShiftI && mask_type != nullptr && mask_type->is_con()) {
       const TypeInt* shift_type = type(n->in(1)->in(2))->isa_int();
 
       // Check that 'shift' is a con
