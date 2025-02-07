@@ -53,15 +53,15 @@ static Node* handle_div_mod_op(PhaseLowering* phase, Node* n, BasicType bt, bool
     divmod->add_prec_from(n);
     divmod->add_prec_from(d);
 
-    phase->register_new_node_with_optimizer(divmod);
-    phase->register_new_node_with_optimizer(divmod->div_proj());
+    phase->transform(divmod);
+    phase->transform(divmod->div_proj());
 
     phase->replace_node(d, divmod->div_proj());
 
     return divmod->mod_proj();
   } else {
     // Replace "a % b" with "a - ((a / b) * b)"
-    Node* mult = MulNode::make(d, d->in(2), bt);
+    Node* mult = phase->transform(MulNode::make(d, d->in(2), bt));
     Node* sub = SubNode::make(d->in(1), mult, bt);
     return sub;
   }
@@ -88,12 +88,12 @@ Node* PhaseLowering::lower_node(Node* n) {
 
   if (n->Opcode() == Op_CmpUL && !Matcher::has_match_rule(Op_CmpUL)) {
     // No support for unsigned long comparisons
-    Node* sign_pos = new ConINode(TypeInt::make(BitsPerLong - 1));
-    Node* sign_bit_mask = new RShiftLNode(n->in(1), sign_pos);
-    Node* orl = new OrLNode(n->in(1), sign_bit_mask);
-    Node* remove_sign_mask = new ConLNode(TypeLong::make(max_jlong));
-    Node* andl = new AndLNode(orl, remove_sign_mask);
-    Node* cmp = new CmpLNode(andl, n->in(2));
+    Node* sign_pos = intcon(BitsPerLong - 1);
+    Node* sign_bit_mask = transform(new RShiftLNode(n->in(1), sign_pos));
+    Node* orl = transform(new OrLNode(n->in(1), sign_bit_mask));
+    Node* remove_sign_mask = longcon(max_jlong);
+    Node* andl = transform(new AndLNode(orl, remove_sign_mask));
+    Node* cmp = transform(new CmpLNode(andl, n->in(2)));
     return cmp;
   }
 
@@ -110,13 +110,13 @@ Node* PhaseLowering::mask_shifted_count(Node* n) {
   if (t != nullptr && t->is_con()) {
     juint shift = t->get_con();
     if (shift > mask) { // Unsigned cmp
-      n->set_req(2, ConNode::make(TypeInt::make(shift & mask)));
+      n->set_req(2, intcon(shift & mask));
 
       return n;
     }
   } else {
     if (t == nullptr || t->_lo < 0 || t->_hi > (int)mask) {
-      Node* shift = new AndINode(in2, ConNode::make(TypeInt::make(mask)));
+      Node* shift = new AndINode(in2, intcon(mask));
       n->set_req(2, shift);
 
       return n;

@@ -721,9 +721,13 @@ public:
   // Main function to lower all nodes in the graph.
   void lower();
 
+  virtual Node* transform(Node* n) {
+    return register_new_node_with_optimizer(n);
+  }
+
   // Helper functions
 
-  static Node* mask_shifted_count(Node* n);
+  Node* mask_shifted_count(Node* n);
 };
 
 #endif // SHARE_OPTO_PHASEX_HPP
