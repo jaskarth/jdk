@@ -46,12 +46,10 @@ Node* PhaseLowering::lower_node_platform(Node* n) {
           int and_value = exact_log2(mask_type->get_con() + 1);
           int shift_value = shift_type->get_con();
 
+          // bextr can only extract up to 31 bits
           if (and_value + shift_value < BitsPerJavaInteger) {
             // Encode the constant for the bextr
             int bextr_imm = and_value << 8 | shift_value;
-
-//            Compile::current()->method()->print_name();
-//            tty->print_cr(" %d %d", and_value, shift_value);
 
             return new BextrNode(n->in(1)->in(1), intcon(bextr_imm));
           }
