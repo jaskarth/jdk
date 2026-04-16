@@ -969,91 +969,131 @@ void RangeCheckEliminator::remove_range_check(AccessIndexed *ai) {
 }
 
 // Calculate bounds for instruction in this block and children blocks in the dominator tree
-void RangeCheckEliminator::calc_bounds(BlockBegin *block, BlockBegin *loop_header) {
-  // Ensures a valid loop_header
-  assert(!loop_header || loop_header->is_set(BlockBegin::linear_scan_loop_header_flag), "Loop header has to be real !");
+void RangeCheckEliminator::calc_bounds(BlockBegin* start_block, BlockBegin* start_loop_header) {
+  ResourceMark rm;
+  
+  class BoundsEntry : ResourceObj {
+  public:    
+    BlockBegin* _block;
+    BlockBegin* _loop_header;
+    IntegerStack _pushed;
+    int _ary_idx;
+    bool _processed;
 
-  // Tracing output
-  TRACE_RANGE_CHECK_ELIMINATION(
-    tty->fill_to(block->dominator_depth()*2);
-    tty->print_cr("Block B%d", block->block_id());
-  );
+    BoundsEntry(BlockBegin *block, BlockBegin *loop_header)
+        : _block(block), _loop_header(loop_header), _pushed(IntegerStack()), _ary_idx(0), _processed(0) {}
 
-  // Pushed stack for conditions
-  IntegerStack pushed;
-  // Process If
-  BlockBegin *parent = block->dominator();
-  if (parent != nullptr) {
-    If *cond = parent->end()->as_If();
-    if (cond != nullptr) {
-      process_if(pushed, block, cond);
+    BoundsEntry() : BoundsEntry(nullptr, nullptr) {}
+  };
+
+  GrowableArray<BoundsEntry> stack;
+  stack.push(BoundsEntry(start_block, start_loop_header));
+  while (!stack.is_empty()) {
+    BoundsEntry* entry = &stack.last();
+    BlockBegin* block = entry->_block;
+    BlockBegin* loop_header = entry->_loop_header;
+    // Pushed stack for conditions
+    IntegerStack pushed = entry->_pushed;
+
+    if (entry->_processed) {
+      // Reset stack
+      for (int i = 0; i < pushed.length(); i++) {
+        _bounds.at(pushed.at(i))->pop();
+      }   
+      stack.pop();
+      continue;
     }
-  }
 
-  // Iterate over current block
-  InstructionList arrays;
-  AccessIndexedList accessIndexed;
-  Instruction *cur = block;
+    // Ensures a valid loop_header
+    assert(!loop_header || loop_header->is_set(BlockBegin::linear_scan_loop_header_flag), "Loop header has to be real !");
 
-  while (cur) {
-    // Ensure cur wasn't inserted during the elimination
-    if (cur->id() < this->_bounds.length()) {
-      // Process only if it is an access indexed instruction
-      AccessIndexed *ai = cur->as_AccessIndexed();
-      if (ai != nullptr) {
-        process_access_indexed(loop_header, block, ai);
-        accessIndexed.append(ai);
-        if (!arrays.contains(ai->array())) {
-          arrays.append(ai->array());
-        }
-        Bound *b = get_bound(ai->index());
-        if (!b->lower_instr()) {
-          // Lower bound is constant
-          update_bound(pushed, ai->index(), Instruction::geq, nullptr, 0);
-        }
-        if (!b->has_upper()) {
-          if (ai->length() && ai->length()->type()->as_IntConstant()) {
-            int value = ai->length()->type()->as_IntConstant()->value();
-            update_bound(pushed, ai->index(), Instruction::lss, nullptr, value);
-          } else {
-            // Has no upper bound
-            Instruction *instr = ai->length();
-            if (instr == nullptr) instr = ai->array();
-            update_bound(pushed, ai->index(), Instruction::lss, instr, 0);
+    // Tracing output
+    TRACE_RANGE_CHECK_ELIMINATION(
+      tty->fill_to(block->dominator_depth()*2);
+      tty->print_cr("Block B%d", block->block_id());
+    );
+
+    // Process If
+    BlockBegin *parent = block->dominator();
+    if (parent != nullptr) {
+      If *cond = parent->end()->as_If();
+      if (cond != nullptr) {
+        process_if(pushed, block, cond);
+      }
+    }
+  
+    // Iterate over current block
+    InstructionList arrays;
+    AccessIndexedList accessIndexed;
+    Instruction *cur = block;
+  
+    while (cur) {
+      // Ensure cur wasn't inserted during the elimination
+      if (cur->id() < this->_bounds.length()) {
+        // Process only if it is an access indexed instruction
+        AccessIndexed *ai = cur->as_AccessIndexed();
+        if (ai != nullptr) {
+          process_access_indexed(loop_header, block, ai);
+          accessIndexed.append(ai);
+          if (!arrays.contains(ai->array())) {
+            arrays.append(ai->array());
+          }
+          Bound *b = get_bound(ai->index());
+          if (!b->lower_instr()) {
+            // Lower bound is constant
+            update_bound(pushed, ai->index(), Instruction::geq, nullptr, 0);
+          }
+          if (!b->has_upper()) {
+            if (ai->length() && ai->length()->type()->as_IntConstant()) {
+              int value = ai->length()->type()->as_IntConstant()->value();
+              update_bound(pushed, ai->index(), Instruction::lss, nullptr, value);
+            } else {
+              // Has no upper bound
+              Instruction *instr = ai->length();
+              if (instr == nullptr) instr = ai->array();
+              update_bound(pushed, ai->index(), Instruction::lss, instr, 0);
+            }
           }
         }
       }
+      cur = cur->next();
     }
-    cur = cur->next();
-  }
-
-  // Output current condition stack
-  TRACE_RANGE_CHECK_ELIMINATION(dump_condition_stack(block));
-
-  // Do in block motion of range checks
-  in_block_motion(block, accessIndexed, arrays);
-
-  // Call all dominated blocks
-  for (int i=0; i<block->dominates()->length(); i++) {
-    BlockBegin *next = block->dominates()->at(i);
-    if (!next->is_set(BlockBegin::donot_eliminate_range_checks)) {
-      // if current block is a loop header and:
-      // - next block belongs to the same loop
-      // or
-      // - next block belongs to an inner loop
-      // then current block is the loop header for next block
-      if (block->is_set(BlockBegin::linear_scan_loop_header_flag) && (block->loop_index() == next->loop_index() || next->loop_depth() > block->loop_depth())) {
-        calc_bounds(next, block);
-      } else {
-        calc_bounds(next, loop_header);
+  
+    // Output current condition stack
+    TRACE_RANGE_CHECK_ELIMINATION(dump_condition_stack(block));
+  
+    // Do in block motion of range checks
+    in_block_motion(block, accessIndexed, arrays);
+  
+    // Call all dominated blocks
+    for (; entry->_ary_idx < block->dominates()->length(); entry->_ary_idx++) {
+      BlockBegin *next = block->dominates()->at(entry->_ary_idx);
+      if (!next->is_set(BlockBegin::donot_eliminate_range_checks)) {
+        // if current block is a loop header and:
+        // - next block belongs to the same loop
+        // or
+        // - next block belongs to an inner loop
+        // then current block is the loop header for next block
+        if (block->is_set(BlockBegin::linear_scan_loop_header_flag) && (block->loop_index() == next->loop_index() || next->loop_depth() > block->loop_depth())) {
+          stack.push(BoundsEntry(next, block));
+          entry->_ary_idx++;
+          break;
+        } else {
+          stack.push(BoundsEntry(next, loop_header));
+          entry->_ary_idx++;
+          break;
+        }
       }
     }
-  }
 
-  // Reset stack
-  for (int i=0; i<pushed.length(); i++) {
-    _bounds.at(pushed.at(i))->pop();
+    if (entry->_ary_idx >= block->dominates()->length()) {
+      entry->_processed = true;
+    }      
   }
+  // Reset stack
+  //  for (int i=0; i<pushed.length(); i++) {
+  //  _bounds.at(pushed.at(i))->pop();
+  // }
 }
 
 #ifndef PRODUCT
