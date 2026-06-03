@@ -42,7 +42,15 @@ public class TestIRAbs {
     private static final RestrictableGenerator<Long> LONGS = Generators.G.longs();
 
     private static final IntRange INT_RANGE = IntRange.generate(INTS);
+    private static final IntRange INT_FULL_RANGE = new IntRange(Integer.MIN_VALUE, Integer.MAX_VALUE);
+    private static final IntRange INT_UNSIGNED_MAX = new IntRange(-1, Integer.MAX_VALUE);
+    private static final IntRange INT_POSITIVE = new IntRange(0, Integer.MAX_VALUE);
+    private static final IntRange INT_NEGATIVE = new IntRange(Integer.MIN_VALUE, 0);
     private static final LongRange LONG_RANGE = LongRange.generate(LONGS);
+    private static final LongRange LONG_FULL_RANGE = new LongRange(Long.MIN_VALUE, Long.MAX_VALUE);
+    private static final LongRange LONG_UNSIGNED_MAX = new LongRange(-1, Long.MAX_VALUE);
+    private static final LongRange LONG_POSITIVE = new LongRange(0, Long.MAX_VALUE);
+    private static final LongRange LONG_NEGATIVE = new LongRange(Long.MIN_VALUE, 0);
 
     private static final int INT_1 = INTS.next();
     private static final int INT_2 = INTS.next();
@@ -255,7 +263,9 @@ public class TestIRAbs {
         }
     }
 
-    @Run(test = {"testIntRange1", "testIntRange2", "testIntRange3", "testIntRange4", "testIntRangeFolding"})
+    @Run(test = {"testIntRange1", "testIntRange2", "testIntRange3", "testIntRange4",
+                 "testIntRangeFolding", "testIntFullRangeFolding", "testIntUnsignedMaxFolding",
+                 "testIntPositiveRangeFolding", "testIntNegativeRangeFolding"})
     public void checkIntRanges(RunInfo info) {
         for (int i : ispecial) {
             checkIntRange(i);
@@ -274,9 +284,15 @@ public class TestIRAbs {
         Asserts.assertEquals(Math.abs(-((i & 7) + 2)) < 2, testIntRange3(i));
         Asserts.assertEquals(Math.abs(-((i & 7) + 2)) > 9, testIntRange4(i));
         Asserts.assertEquals(testIntRangeFoldingInterpreter(i), testIntRangeFolding(i));
+        Asserts.assertEquals(testIntFullRangeFoldingInterpreter(i), testIntFullRangeFolding(i));
+        Asserts.assertEquals(testIntUnsignedMaxFoldingInterpreter(i), testIntUnsignedMaxFolding(i));
+        Asserts.assertEquals(testIntPositiveRangeFoldingInterpreter(i), testIntPositiveRangeFolding(i));
+        Asserts.assertEquals(testIntNegativeRangeFoldingInterpreter(i), testIntNegativeRangeFolding(i));
     }
 
-    @Run(test = {"testLongRange1", "testLongRange2", "testLongRange3", "testLongRange4", "testLongRangeFolding"})
+    @Run(test = {"testLongRange1", "testLongRange2", "testLongRange3", "testLongRange4",
+                 "testLongRangeFolding", "testLongFullRangeFolding", "testLongUnsignedMaxFolding",
+                 "testLongPositiveRangeFolding", "testLongNegativeRangeFolding"})
     public void checkLongRanges(RunInfo info) {
         for (long l : lspecial) {
           checkLongRange(l);
@@ -295,6 +311,10 @@ public class TestIRAbs {
         Asserts.assertEquals(Math.abs(-((l & 7) + 2)) < 2, testLongRange3(l));
         Asserts.assertEquals(Math.abs(-((l & 7) + 2)) > 9, testLongRange4(l));
         Asserts.assertEquals(testLongRangeFoldingInterpreter(l), testLongRangeFolding(l));
+        Asserts.assertEquals(testLongFullRangeFoldingInterpreter(l), testLongFullRangeFolding(l));
+        Asserts.assertEquals(testLongUnsignedMaxFoldingInterpreter(l), testLongUnsignedMaxFolding(l));
+        Asserts.assertEquals(testLongPositiveRangeFoldingInterpreter(l), testLongPositiveRangeFolding(l));
+        Asserts.assertEquals(testLongNegativeRangeFoldingInterpreter(l), testLongNegativeRangeFolding(l));
     }
 
     // Int ranges
@@ -363,6 +383,150 @@ public class TestIRAbs {
         return sum;
     }
 
+    @Test
+    public int testIntFullRangeFolding(int in) {
+        int c = INT_FULL_RANGE.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testIntFullRangeFoldingInterpreter(int in) {
+        int c = INT_FULL_RANGE.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @Test
+    public int testIntUnsignedMaxFolding(int in) {
+        int c = INT_UNSIGNED_MAX.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testIntUnsignedMaxFoldingInterpreter(int in) {
+        int c = INT_UNSIGNED_MAX.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @Test
+    public int testIntPositiveRangeFolding(int in) {
+        int c = INT_POSITIVE.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testIntPositiveRangeFoldingInterpreter(int in) {
+        int c = INT_POSITIVE.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @Test
+    public int testIntNegativeRangeFolding(int in) {
+        int c = INT_NEGATIVE.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testIntNegativeRangeFoldingInterpreter(int in) {
+        int c = INT_NEGATIVE.clamp(in);
+        int v = Math.abs(c);
+
+        int sum = 0;
+        if (v > INT_1) { sum += 1; }
+        if (v > INT_2) { sum += 2; }
+        if (v > INT_3) { sum += 4; }
+        if (v > INT_4) { sum += 8; }
+        if (v > INT_5) { sum += 16; }
+        if (v > INT_6) { sum += 32; }
+        if (v > INT_7) { sum += 64; }
+        if (v > INT_8) { sum += 128; }
+
+        return sum;
+    }
+
     // Long ranges
 
     @Test
@@ -414,6 +578,150 @@ public class TestIRAbs {
     @DontCompile
     public int testLongRangeFoldingInterpreter(long in) {
         long c = LONG_RANGE.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @Test
+    public int testLongFullRangeFolding(long in) {
+        long c = LONG_FULL_RANGE.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testLongFullRangeFoldingInterpreter(long in) {
+        long c = LONG_FULL_RANGE.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @Test
+    public int testLongUnsignedMaxFolding(long in) {
+        long c = LONG_UNSIGNED_MAX.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testLongUnsignedMaxFoldingInterpreter(long in) {
+        long c = LONG_UNSIGNED_MAX.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @Test
+    public int testLongPositiveRangeFolding(long in) {
+        long c = LONG_POSITIVE.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testLongPositiveRangeFoldingInterpreter(long in) {
+        long c = LONG_POSITIVE.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @Test
+    public int testLongNegativeRangeFolding(long in) {
+        long c = LONG_NEGATIVE.clamp(in);
+        long v = Math.abs(c);
+
+        int sum = 0;
+        if (v > LONG_1) { sum += 1; }
+        if (v > LONG_2) { sum += 2; }
+        if (v > LONG_3) { sum += 4; }
+        if (v > LONG_4) { sum += 8; }
+        if (v > LONG_5) { sum += 16; }
+        if (v > LONG_6) { sum += 32; }
+        if (v > LONG_7) { sum += 64; }
+        if (v > LONG_8) { sum += 128; }
+
+        return sum;
+    }
+
+    @DontCompile
+    public int testLongNegativeRangeFoldingInterpreter(long in) {
+        long c = LONG_NEGATIVE.clamp(in);
         long v = Math.abs(c);
 
         int sum = 0;
