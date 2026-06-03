@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1363,6 +1363,27 @@ JvmtiEnvBase::set_frame_pop(JvmtiThreadState* state, javaVFrame* jvf, jint depth
   if (ets->is_frame_pop(frame_number)) {
     return JVMTI_ERROR_DUPLICATE;
   }
+  JavaThread* thread = state->get_thread();
+  frame fr = jvf->fr();
+
+  if (jvf->is_compiled_frame()) {
+    if (!fr.can_be_deoptimized()) {
+      return JVMTI_ERROR_OPAQUE_FRAME;
+    }
+
+    if (state->is_virtual() && (thread == nullptr || !thread->is_vthread_mounted())) { // unmounted virtual thread
+      assert(fr.is_heap_frame(), "sanity check");
+      fr = jvf->stack_chunk()->derelativize(fr);
+      jvf->stack_chunk()->force_slow_path();
+      fr.deoptimize(nullptr);
+    } else { // platform thread or mounted virtual thread
+      if (fr.is_heap_frame()) {
+        fr = jvf->stack_chunk()->derelativize(fr);
+        jvf->stack_chunk()->force_slow_path();
+      }
+      Deoptimization::deoptimize(thread, fr);
+    }
+  }
   ets->set_frame_pop(frame_number);
   return JVMTI_ERROR_NONE;
 }
@@ -1529,7 +1550,7 @@ JvmtiEnvBase::get_object_monitor_usage(JavaThread* calling_thread, jobject objec
   GrowableArray<JavaThread*>* wantList = nullptr;
 
   ObjectMonitor* mon = mark.has_monitor()
-      ? ObjectSynchronizer::read_monitor(current_thread, hobj(), mark)
+      ? ObjectSynchronizer::read_monitor(hobj(), mark)
       : nullptr;
 
   if (mon != nullptr) {
@@ -2491,7 +2512,7 @@ SetOrClearFramePopClosure::do_thread(Thread *target) {
     _result = JVMTI_ERROR_NO_MORE_FRAMES;
     return;
   }
-  assert(_state->get_thread_or_saved() == java_thread, "Must be");
+  assert(_state->get_thread() == java_thread, "Must be");
 
   RegisterMap reg_map(java_thread,
                       RegisterMap::UpdateMap::include,
@@ -2514,6 +2535,8 @@ SetOrClearFramePopClosure::do_vthread(Handle target_h) {
     _result = _env->clear_all_frame_pops(_state);
     return;
   }
+  assert(_state->get_thread() == _target_jt, "sanity check");
+
   javaVFrame *jvf = JvmtiEnvBase::get_vthread_jvf(target_h());
   _result = _env->set_frame_pop(_state, jvf, _depth);
 }

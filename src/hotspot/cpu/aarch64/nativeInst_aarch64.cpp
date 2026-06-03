@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2026, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2014, 2020, Red Hat Inc. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -36,9 +36,6 @@
 #include "utilities/ostream.hpp"
 #ifdef COMPILER1
 #include "c1/c1_Runtime1.hpp"
-#endif
-#if INCLUDE_JVMCI
-#include "jvmci/jvmciEnv.hpp"
 #endif
 
 void NativeCall::verify() {
@@ -192,7 +189,6 @@ int NativeMovRegMem::offset() const  {
 
 void NativeMovRegMem::set_offset(int x) {
   address pc = instruction_address();
-  unsigned insn = *(unsigned*)pc;
   if (maybe_cpool_ref(pc)) {
     address addr = MacroAssembler::target_addr_for_insn(pc);
     *(int64_t*)addr = x;
@@ -204,7 +200,7 @@ void NativeMovRegMem::set_offset(int x) {
 
 void NativeMovRegMem::verify() {
 #ifdef ASSERT
-  address dest = MacroAssembler::target_addr_for_insn_or_null(instruction_address());
+  MacroAssembler::target_addr_for_insn(instruction_address());
 #endif
 }
 
@@ -213,7 +209,7 @@ void NativeMovRegMem::verify() {
 void NativeJump::verify() { ; }
 
 address NativeJump::jump_destination() const          {
-  address dest = MacroAssembler::target_addr_for_insn_or_null(instruction_address());
+  address dest = MacroAssembler::target_addr_for_insn(instruction_address());
 
   // We use jump to self as the unresolved address which the inline
   // cache code (and relocs) know about
@@ -363,30 +359,6 @@ void NativeCallTrampolineStub::set_destination(address new_destination) {
   set_ptr_at(data_offset, new_destination);
   OrderAccess::release();
 }
-
-#if INCLUDE_JVMCI
-// Generate a trampoline for a branch to dest.  If there's no need for a
-// trampoline, simply patch the call directly to dest.
-void NativeCall::trampoline_jump(CodeBuffer &cbuf, address dest, JVMCI_TRAPS) {
-  MacroAssembler a(&cbuf);
-
-  if (!a.far_branches()) {
-    // If not using far branches, patch this call directly to dest.
-    set_destination(dest);
-  } else if (!is_NativeCallTrampolineStub_at(instruction_address() + displacement())) {
-    // If we want far branches and there isn't a trampoline stub, emit one.
-    address stub = a.emit_trampoline_stub(instruction_address() - cbuf.insts()->start(), dest);
-    if (stub == nullptr) {
-      JVMCI_ERROR("could not emit trampoline stub - code cache is full");
-    }
-    // The relocation created while emitting the stub will ensure this
-    // call instruction is subsequently patched to call the stub.
-  } else {
-    // Not sure how this can be happen but be defensive
-    JVMCI_ERROR("single-use stub should not exist");
-  }
-}
-#endif
 
 void NativePostCallNop::make_deopt() {
   NativeDeoptInstruction::insert(addr_at(0));
